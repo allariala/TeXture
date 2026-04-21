@@ -424,7 +424,7 @@ async function onSelectionChangedWord() {
 // ==========================================
 function updatePreview() {
     const tex = editor.value.replace(/\$\$/g, "");
-    preview.style.fontSize = fontSizeInput.value + "pt";
+    preview.style.fontSize = "18pt";
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     preview.style.color = isDark ? "#ffffff" : "#000000";
 
