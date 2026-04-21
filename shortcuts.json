@@ -1,0 +1,18 @@
+{
+  "actions": [
+    {
+      "id": "ShowTaskpane",
+      "type": "ExecuteFunction",
+      "name": "Show Sidebar"
+    }
+  ],
+  "shortcuts": [
+    {
+      "action": "ShowTaskpane",
+      "key": {
+        "default": "Alt+Shift+E",
+        "mac": "Command+Shift+E"
+      }
+    }
+  ]
+}

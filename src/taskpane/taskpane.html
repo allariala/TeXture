@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+        :root { --primary: #B7472A; --bg: #ffffff; --surface: #f3f2f1; --border: #e1e4e8; --text: #24292e; --preview-bg: #ffffff; }
+        @media (prefers-color-scheme: dark) { :root { --bg: #1e1e1e; --surface: #252526; --border: #3e3e42; --text: #d4d4d4; --preview-bg: #2d2d2d; } }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; transition: background 0.3s, color 0.3s; }
+        .toolbar { padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .input-group { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+        input[type="number"] { width: 40px; padding: 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); outline: none; font-weight: bold; text-align: center; }
+        .color-presets { display: flex; gap: 4px; align-items: center; border-left: 1px solid var(--border); padding-left: 10px; }
+        .color-dot { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 1px solid rgba(128,128,128,0.5); transition: transform 0.1s; }
+        .color-dot:hover { transform: scale(1.2); }
+        .color-dot.active { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--primary); }
+        #customColorInput { width: 0; height: 0; opacity: 0; position: absolute; pointer-events: none; }
+        .toggle-container { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .switch { position: relative; width: 28px; height: 16px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #888; transition: .3s; border-radius: 16px; }
+        .slider:before { position: absolute; content: ""; height: 10px; width: 10px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(12px); }
+        textarea { flex: 1; border: none; padding: 15px; font-family: 'Consolas', monospace; font-size: 16px; outline: none; background: var(--surface); color: var(--text); line-height: 1.5; resize: none; }
+        #resizer { height: 8px; background: var(--border); cursor: ns-resize; transition: background 0.2s; border-top: 1px solid rgba(0,0,0,0.05); border-bottom: 1px solid rgba(0,0,0,0.05); flex-shrink: 0; }
+        #resizer:hover { background: var(--primary); }
+        .preview-pane { height: 160px; min-height: 50px; background: var(--preview-bg); border-top: 1px solid var(--border); display: flex; justify-content: center; align-items: center; overflow: auto; position: relative; padding: 15px; transition: background 0.3s; flex-shrink: 0; box-sizing: border-box; }
+        .preview-label { position: absolute; top: 5px; left: 10px; font-size: 10px; color: #888; font-weight: bold; }
+        .footer { padding: 10px; background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+        .btn-primary { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-primary:hover { filter: brightness(1.1); }
+        #guide-modal { display: none; position: fixed; top: 40px; left: 10px; right: 10px; bottom: 60px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); z-index: 100; flex-direction: column; }
+        .modal-header { padding: 12px 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { flex: 1; overflow-y: auto; padding: 0; display: flex; flex-direction: column; }
+        
+        /* 💡 짤림 방지를 위한 테이블 압축 CSS */
+        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; table-layout: fixed; }
+        th, td { padding: 6px; border-bottom: 1px solid var(--border); word-wrap: break-word; }
+        th:nth-child(1) { width: 35%; }
+        th:nth-child(2) { width: 65%; }
+        th { background: rgba(128,128,128,0.1); font-weight: bold; }
+        code { background: rgba(128,128,128,0.2); padding: 3px 6px; border-radius: 4px; color: var(--primary); font-weight: bold; font-family: 'Consolas', monospace; }
+        .code-result { color: #d73a49; }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div class="input-group">
+            <input type="number" id="fontSize" value="24" title="Font Size (pt)"> pt
+            <div class="color-presets" id="colorPresets">
+                <div class="color-dot active" style="background:#000000;" data-color="#000000" title="Black (Default)"></div>
+                <div class="color-dot" style="background:#FF0000;" data-color="#FF0000" title="Red"></div>
+                <div class="color-dot" style="background:#0000FF;" data-color="#0000FF" title="Blue"></div>
+                <div class="color-dot" style="background:#008000;" data-color="#008000" title="Green"></div>
+                <div class="color-dot" style="background: linear-gradient(45deg, red, orange, yellow, green, blue, purple);" title="Custom"></div>
+                <input type="color" id="customColorInput">
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+            <button style="border:none; background:none; color:#6c757d; cursor:pointer; font-weight:bold; font-size:13px;" onclick="clearEditorState()">🧹</button>
+            <label class="toggle-container" title="Auto Snippet Expansion">
+                <span class="switch"><input type="checkbox" id="snippetToggle" checked><span class="slider"></span></span>
+                Snip
+            </label>
+            <button style="border:none; background:none; color:var(--primary); cursor:pointer; font-weight:bold; font-size:13px;" onclick="toggleGuide(true)">📋 Guide</button>
+        </div>
+    </div>
+
+    <textarea id="editor" placeholder="Type LaTeX equation here... (Press ESC to clear)"></textarea>
+    <div id="resizer" title="Drag to resize"></div>
+    <div class="preview-pane" id="preview-pane">
+        <span class="preview-label">LIVE PREVIEW</span>
+        <div id="math-preview"></div>
+    </div>
+
+    <div class="footer">
+        <button class="btn-primary" id="btnInsert">Insert</button>
+    </div>
+
+    <div id="guide-modal">
+        <div class="modal-header">
+            <strong id="modal-title">Snippet Guide</strong>
+            <button onclick="toggleGuide(false)" style="border:none; background:none; cursor:pointer; font-size:16px; color:var(--text); padding:0 5px;">✕</button>
+        </div>
+        <div class="modal-body" id="guide-table-container">
+            <table id="guide-table">
+                <thead><tr><th>Trigger</th><th>Result</th></tr></thead>
+                <tbody id="guide-content"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="taskpane.js"></script>
+</body>
+</html>
