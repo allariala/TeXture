@@ -447,8 +447,10 @@ function handleSnippets() {
     const before = text.substring(0, pos);
     const after = text.substring(pos);
 
-    for (const snip of defaultSnippets) {
-        let matchedLen = 0, matchResult = null;
+    for (const snip of defaultSnippets) { // activeSnippets 대신 현재 쓰는 defaultSnippets로 연결
+        let matchedLen = 0;
+        let matchResult = null;
+
         if (snip.isRegex) {
             const regex = new RegExp(snip.trigger + "$");
             matchResult = before.match(regex);
@@ -459,9 +461,14 @@ function handleSnippets() {
 
         if (matchedLen > 0) {
             const charBeforeMatch = before.charAt(before.length - matchedLen - 1);
+
+            // 1) 백슬래시(\) 방어
             if (charBeforeMatch === '\\') continue;
+
             const isAtSnippet = snip.trigger.startsWith("@");
             if (!isAtSnippet && charBeforeMatch === '@') continue;
+
+            // 2) 단어 경계(Word Boundary) 방어
             const triggerStartChar = snip.isRegex ? matchResult[0].charAt(0) : snip.trigger.charAt(0);
             if (/[a-zA-Z]/.test(triggerStartChar) && /[a-zA-Z]/.test(charBeforeMatch)) continue;
 
@@ -470,16 +477,20 @@ function handleSnippets() {
                 replRaw = replRaw.replace(/\[\[(\d+)\]\]/g, (m, p1) => matchResult[parseInt(p1) + 1] || matchResult[0].trim());
             }
 
-            let cleanRepl = replRaw.replace(/\$[1-9]/g, "");
-            const targetPos = cleanRepl.indexOf("$0");
-            cleanRepl = cleanRepl.replace(/\$0/g, "");
-
-            // [오타 수정] -len 대신 -matchedLen으로 정확히 치환!
-            editor.value = before.slice(0, -matchedLen) + cleanRepl + after;
-            const newCursorPos = pos - matchedLen + (targetPos !== -1 ? targetPos : cleanRepl.length);
-            editor.selectionStart = editor.selectionEnd = newCursorPos;
+            apply(matchedLen, replRaw);
             return;
         }
+    }
+
+    // 💡 분리된 apply 헬퍼 함수
+    function apply(len, replRaw) {
+        let cleanRepl = replRaw.replace(/\$[1-9]/g, "");
+        const targetPos = cleanRepl.indexOf("$0");
+        cleanRepl = cleanRepl.replace(/\$0/g, "");
+
+        editor.value = before.slice(0, -len) + cleanRepl + after;
+        const newCursorPos = pos - len + (targetPos !== -1 ? targetPos : cleanRepl.length);
+        editor.selectionStart = editor.selectionEnd = newCursorPos;
     }
 }
 
