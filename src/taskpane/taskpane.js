@@ -11,6 +11,7 @@ const btnInsert = document.getElementById('btnInsert');
 let activeColor = "#000000";
 let isResizing = false;
 let isInsertingProcess = false; 
+let isDeleting = false;
 
 let currentHost = null;
 let activeMathShapeId = null; 
@@ -160,6 +161,12 @@ customColorInput.oninput = (e) => {
 fontSizeInput.oninput = updatePreview;
 
 editor.onkeydown = (e) => {
+    if (e.key === 'Backspace' || e.key === 'Delete') {
+        isDeleting = true;
+    } else {
+        isDeleting = false;
+    }
+
     if (e.key === 'Escape') {
         e.preventDefault();
         activeMathShapeId = null;
@@ -191,7 +198,7 @@ editor.onkeydown = (e) => {
 
 editor.oninput = () => {
     if (editor.value.trim() === "") activeMathShapeId = null; 
-    if (snippetToggle.checked) handleSnippets();
+    if (snippetToggle.checked && !isDeleting) handleSnippets();
     updatePreview();
 };
 
