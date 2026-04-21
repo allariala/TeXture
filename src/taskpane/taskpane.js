@@ -11,7 +11,9 @@ const btnInsert = document.getElementById('btnInsert');
 let activeColor = "#000000";
 let isResizing = false;
 let isInsertingProcess = false; 
-let isDeleting = false;
+
+// [복구 완료] 백스페이스 감지용 플래그
+let isDeleting = false; 
 
 let currentHost = null;
 let activeMathShapeId = null; 
@@ -78,14 +80,20 @@ const defaultSnippets = [
 // ==========================================
 function triggerBlink() {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
     if (currentHost === Office.HostType.PowerPoint) {
         editor.style.backgroundColor = isDark ? "#5c2312" : "#fbeae6";
     } else {
         editor.style.backgroundColor = isDark ? "#004080" : "#e8f4fd";
     }
-    
     setTimeout(() => { editor.style.backgroundColor = ""; }, 400);
+}
+
+// 💡 강제 초기화
+window.clearEditorState = function() {
+    activeMathShapeId = null;
+    editor.value = "";
+    updatePreview();
+    editor.focus();
 }
 
 // ==========================================
@@ -161,6 +169,7 @@ customColorInput.oninput = (e) => {
 fontSizeInput.oninput = updatePreview;
 
 editor.onkeydown = (e) => {
+    // 💡 [복구 완료] 백스페이스/딜리트 시 isDeleting 플래그 켜기
     if (e.key === 'Backspace' || e.key === 'Delete') {
         isDeleting = true;
     } else {
@@ -169,10 +178,7 @@ editor.onkeydown = (e) => {
 
     if (e.key === 'Escape') {
         e.preventDefault();
-        activeMathShapeId = null;
-        editor.value = "";
-        updatePreview();
-        editor.blur();
+        clearEditorStateSafely(true); // 강제 해제
         return;
     }
 
@@ -198,12 +204,13 @@ editor.onkeydown = (e) => {
 
 editor.oninput = () => {
     if (editor.value.trim() === "") activeMathShapeId = null; 
+    // 💡 방어막 적용! 지우는 중이 아닐 때만 스니펫 동작
     if (snippetToggle.checked && !isDeleting) handleSnippets();
     updatePreview();
 };
 
 // ==========================================
-// 개체 삽입 로직
+// 💡 개체 삽입 로직
 // ==========================================
 async function insertVector() {
     if (isInsertingProcess) return; 
@@ -289,49 +296,53 @@ async function performReplacementPPT(latexCode, svgString) {
             await context.sync();
             existingShapeIds = remainingShapes.items.map(s => s.id);
         });
-    } catch (e) { }
+    } catch (e) {
+        console.warn("삽입 전 동기화 오류:", e);
+    }
 
     Office.context.document.setSelectedDataAsync(
         svgString,
         { coercionType: Office.CoercionType.XmlSvg },
-        async function (asyncResult) {
+        function (asyncResult) {
             if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-                try {
-                    await PowerPoint.run(async (context2) => {
-                        const slide = context2.presentation.getSelectedSlides().getItemAt(0);
-                        const allShapes = slide.shapes;
-                        allShapes.load("items");
-                        await context2.sync();
+                setTimeout(async () => {
+                    try {
+                        await PowerPoint.run(async (context2) => {
+                            const slide = context2.presentation.getSelectedSlides().getItemAt(0);
+                            const allShapes = slide.shapes;
+                            allShapes.load("items");
+                            await context2.sync();
 
-                        const newShape = allShapes.items.find(s => !existingShapeIds.includes(s.id));
+                            const newShape = allShapes.items.find(s => !existingShapeIds.includes(s.id));
 
-                        if (newShape) {
-                            newShape.altTextDescription = "PLX:" + latexCode;
-                            newShape.name = "PLX:" + latexCode; 
-                            newShape.tags.add("PowerLaTeX_Code", latexCode); 
-                            
-                            if (targetLeft !== -1 && targetTop !== -1) {
-                                newShape.left = targetLeft;
-                                newShape.top = targetTop;
+                            if (newShape) {
+                                newShape.altTextDescription = "PLX:" + latexCode;
+                                newShape.name = "PLX:" + latexCode; 
+                                newShape.tags.add("PowerLaTeX_Code", latexCode); 
+                                
+                                if (targetLeft !== -1 && targetTop !== -1) {
+                                    newShape.left = targetLeft;
+                                    newShape.top = targetTop;
+                                }
+                                
+                                newShape.load("id");
+
+                                if (activeMathShapeId) {
+                                    const oldShapeToKill = slide.shapes.getItemOrNullObject(activeMathShapeId);
+                                    oldShapeToKill.delete();
+                                }
+
+                                await context2.sync(); 
+                                activeMathShapeId = newShape.id; 
                             }
-                            
-                            newShape.load("id");
-
-                            if (activeMathShapeId) {
-                                const oldShapeToKill = slide.shapes.getItemOrNullObject(activeMathShapeId);
-                                oldShapeToKill.delete();
-                            }
-
-                            await context2.sync(); 
-                            activeMathShapeId = newShape.id; 
-                        }
-                    });
-                } catch (err) {
-                    console.error("후처리 에러:", err);
-                } finally {
-                    isInsertingProcess = false;
-                    editor.focus();
-                }
+                        }).catch(e => { console.warn("Webpack Overlay 방지용 억제:", e); }); // 빨간 에러 억제
+                    } catch (err) {
+                        console.error("후처리 에러:", err);
+                    } finally {
+                        isInsertingProcess = false;
+                        editor.focus();
+                    }
+                }, 50); 
             } else {
                 isInsertingProcess = false;
             }
@@ -342,13 +353,14 @@ async function performReplacementPPT(latexCode, svgString) {
 // ==========================================
 // 역참조 및 홀드 해제 로직
 // ==========================================
-function clearEditorStateSafely() {
-    if (!document.hasFocus()) {
+function clearEditorStateSafely(force = false) {
+    if (force || !document.hasFocus()) {
         if (editor.value !== "") {
             editor.value = "";
             updatePreview();
         }
         activeMathShapeId = null;
+        if (force) editor.blur();
     }
 }
 
@@ -392,7 +404,7 @@ async function onSelectionChangedPPT() {
             } else {
                 clearEditorStateSafely();
             }
-        });
+        }).catch(e => { console.warn("Webpack Overlay 방지용 억제:", e); }); // 빨간 에러 억제
     } catch (e) {
         clearEditorStateSafely();
     }
@@ -420,7 +432,7 @@ async function onSelectionChangedWord() {
             } else {
                 clearEditorStateSafely();
             }
-        });
+        }).catch(e => { console.warn("Webpack Overlay 방지용 억제:", e); }); // 빨간 에러 억제
     } catch (e) { 
         clearEditorStateSafely();
     } 
@@ -431,7 +443,7 @@ async function onSelectionChangedWord() {
 // ==========================================
 function updatePreview() {
     const tex = editor.value.replace(/\$\$/g, "");
-    preview.style.fontSize = "18pt";
+    preview.style.fontSize = fontSizeInput.value + "pt";
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     preview.style.color = isDark ? "#ffffff" : "#000000";
 
@@ -454,10 +466,8 @@ function handleSnippets() {
     const before = text.substring(0, pos);
     const after = text.substring(pos);
 
-    for (const snip of defaultSnippets) { // activeSnippets 대신 현재 쓰는 defaultSnippets로 연결
-        let matchedLen = 0;
-        let matchResult = null;
-
+    for (const snip of defaultSnippets) {
+        let matchedLen = 0, matchResult = null;
         if (snip.isRegex) {
             const regex = new RegExp(snip.trigger + "$");
             matchResult = before.match(regex);
@@ -468,14 +478,11 @@ function handleSnippets() {
 
         if (matchedLen > 0) {
             const charBeforeMatch = before.charAt(before.length - matchedLen - 1);
-
-            // 1) 백슬래시(\) 방어
+            
+            // 백슬래시, 단어 경계 방어막
             if (charBeforeMatch === '\\') continue;
-
             const isAtSnippet = snip.trigger.startsWith("@");
             if (!isAtSnippet && charBeforeMatch === '@') continue;
-
-            // 2) 단어 경계(Word Boundary) 방어
             const triggerStartChar = snip.isRegex ? matchResult[0].charAt(0) : snip.trigger.charAt(0);
             if (/[a-zA-Z]/.test(triggerStartChar) && /[a-zA-Z]/.test(charBeforeMatch)) continue;
 
@@ -484,20 +491,15 @@ function handleSnippets() {
                 replRaw = replRaw.replace(/\[\[(\d+)\]\]/g, (m, p1) => matchResult[parseInt(p1) + 1] || matchResult[0].trim());
             }
 
-            apply(matchedLen, replRaw);
+            let cleanRepl = replRaw.replace(/\$[1-9]/g, "");
+            const targetPos = cleanRepl.indexOf("$0");
+            cleanRepl = cleanRepl.replace(/\$0/g, "");
+
+            editor.value = before.slice(0, -matchedLen) + cleanRepl + after;
+            const newCursorPos = pos - matchedLen + (targetPos !== -1 ? targetPos : cleanRepl.length);
+            editor.selectionStart = editor.selectionEnd = newCursorPos;
             return;
         }
-    }
-
-    // 💡 분리된 apply 헬퍼 함수
-    function apply(len, replRaw) {
-        let cleanRepl = replRaw.replace(/\$[1-9]/g, "");
-        const targetPos = cleanRepl.indexOf("$0");
-        cleanRepl = cleanRepl.replace(/\$0/g, "");
-
-        editor.value = before.slice(0, -len) + cleanRepl + after;
-        const newCursorPos = pos - len + (targetPos !== -1 ? targetPos : cleanRepl.length);
-        editor.selectionStart = editor.selectionEnd = newCursorPos;
     }
 }
 
