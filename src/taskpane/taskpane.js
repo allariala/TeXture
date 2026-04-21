@@ -73,7 +73,7 @@ const defaultSnippets = [
 ];
 
 // ==========================================
-// 💡 깜빡임 피드백 (파워포인트 주황색 / 워드 파란색)
+// 깜빡임 로직
 // ==========================================
 function triggerBlink() {
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -85,14 +85,6 @@ function triggerBlink() {
     }
     
     setTimeout(() => { editor.style.backgroundColor = ""; }, 400);
-}
-
-// 💡 강제 초기화 (ESC 및 Clear 버튼 용)
-window.clearEditorState = function() {
-    activeMathShapeId = null;
-    editor.value = "";
-    updatePreview();
-    editor.focus();
 }
 
 // ==========================================
@@ -168,10 +160,12 @@ customColorInput.oninput = (e) => {
 fontSizeInput.oninput = updatePreview;
 
 editor.onkeydown = (e) => {
-    // 💡 [해결 2] ESC를 누르면 즉시 100% 수정 모드 탈출
     if (e.key === 'Escape') {
         e.preventDefault();
-        clearEditorState();
+        activeMathShapeId = null;
+        editor.value = "";
+        updatePreview();
+        editor.blur();
         return;
     }
 
@@ -202,7 +196,7 @@ editor.oninput = () => {
 };
 
 // ==========================================
-// 💡 개체 삽입 로직
+// 개체 삽입 로직
 // ==========================================
 async function insertVector() {
     if (isInsertingProcess) return; 
@@ -259,7 +253,7 @@ async function insertVector() {
 }
 
 // ==========================================
-// 💡 [해결 1] 딜레이 0 (Zero) 동시 교체 로직 (가운데 순간이동 방지)
+// 파워포인트 삽입 및 데이터 보존 로직
 // ==========================================
 async function performReplacementPPT(latexCode, svgString) {
     let targetLeft = -1, targetTop = -1;
@@ -272,7 +266,6 @@ async function performReplacementPPT(latexCode, svgString) {
             allShapes.load("items");
             await context.sync();
 
-            // 기존 도형의 정보만 가져오고 "삭제는 이따 한 번에" 처리합니다.
             if (activeMathShapeId) {
                 const oldShape = allShapes.getItemOrNullObject(activeMathShapeId);
                 oldShape.load(["left", "top"]);
@@ -281,8 +274,6 @@ async function performReplacementPPT(latexCode, svgString) {
                 if (!oldShape.isNullObject) {
                     targetLeft = oldShape.left;
                     targetTop = oldShape.top;
-                    // [핵심] 여기서 지우면 빈자리가 생겨 새 수식이 가운데로 갑니다.
-                    // 원본을 잠깐 살려두고 마지막에 새거랑 동시에 교체(Switch)해야 안 어색합니다.
                 }
             }
 
@@ -298,7 +289,6 @@ async function performReplacementPPT(latexCode, svgString) {
         { coercionType: Office.CoercionType.XmlSvg },
         async function (asyncResult) {
             if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-                // 💡 setTimeout 대기시간 완전 제거! (렌더링 되자마자 제자리로 강제 순간이동)
                 try {
                     await PowerPoint.run(async (context2) => {
                         const slide = context2.presentation.getSelectedSlides().getItemAt(0);
@@ -313,7 +303,6 @@ async function performReplacementPPT(latexCode, svgString) {
                             newShape.name = "PLX:" + latexCode; 
                             newShape.tags.add("PowerLaTeX_Code", latexCode); 
                             
-                            // 새 수식을 원래 수식 자리로 덮어씌움
                             if (targetLeft !== -1 && targetTop !== -1) {
                                 newShape.left = targetLeft;
                                 newShape.top = targetTop;
@@ -321,13 +310,12 @@ async function performReplacementPPT(latexCode, svgString) {
                             
                             newShape.load("id");
 
-                            // 과거 수식 확실히 사살
                             if (activeMathShapeId) {
                                 const oldShapeToKill = slide.shapes.getItemOrNullObject(activeMathShapeId);
                                 oldShapeToKill.delete();
                             }
 
-                            await context2.sync(); // 이 순간 '이동'과 '삭제'가 한 프레임에 반영되어 깜빡임이 사라집니다.
+                            await context2.sync(); 
                             activeMathShapeId = newShape.id; 
                         }
                     });
@@ -345,7 +333,7 @@ async function performReplacementPPT(latexCode, svgString) {
 }
 
 // ==========================================
-// 역참조 및 홀드(Hold) 해제 로직
+// 역참조 및 홀드 해제 로직
 // ==========================================
 function clearEditorStateSafely() {
     if (!document.hasFocus()) {
@@ -436,7 +424,7 @@ async function onSelectionChangedWord() {
 // ==========================================
 function updatePreview() {
     const tex = editor.value.replace(/\$\$/g, "");
-    preview.style.fontSize = "18pt";
+    preview.style.fontSize = fontSizeInput.value + "pt";
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     preview.style.color = isDark ? "#ffffff" : "#000000";
 
@@ -486,8 +474,9 @@ function handleSnippets() {
             const targetPos = cleanRepl.indexOf("$0");
             cleanRepl = cleanRepl.replace(/\$0/g, "");
 
-            editor.value = before.slice(0, -len) + cleanRepl + after;
-            const newCursorPos = pos - len + (targetPos !== -1 ? targetPos : cleanRepl.length);
+            // [오타 수정] -len 대신 -matchedLen으로 정확히 치환!
+            editor.value = before.slice(0, -matchedLen) + cleanRepl + after;
+            const newCursorPos = pos - matchedLen + (targetPos !== -1 ? targetPos : cleanRepl.length);
             editor.selectionStart = editor.selectionEnd = newCursorPos;
             return;
         }
