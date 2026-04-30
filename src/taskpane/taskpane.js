@@ -22,7 +22,7 @@ let activeMathShapeId = null;
 // 스니펫 데이터
 // ==========================================
 const GREEK = "alpha|Alpha|beta|Beta|gamma|Gamma|delta|Delta|epsilon|Epsilon|varepsilon|zeta|Zeta|eta|Eta|theta|Theta|vartheta|iota|Iota|kappa|Kappa|lambda|Lambda|mu|Mu|nu|Nu|xi|Xi|omicron|Omicron|pi|Pi|rho|Rho|sigma|Sigma|tau|Tau|upsilon|Upsilon|phi|Phi|varphi|chi|Chi|psi|Psi|omega|Omega|partial";
-const SYMBOL = "infty|pm|mp|dots|nabla|times|cdot|parallel|equiv|neq|geq|leq|gg|ll|sim|simeq|propto|leftrightarrow|to|mapsto|implies|impliedby|cap|cup|in|notin|setminus|subseteq|supseteq|emptyset|exists|forall|approx|therefore|iff|ln|log|min|max|inf|sup|because";
+const SYMBOL = "infty|pm|mp|dots|nabla|times|cdot|parallel|equiv|neq|geq|leq|gg|ll|sim|simeq|propto|leftrightarrow|to|mapsto|implies|impliedby|cap|cup|in|notin|setminus|subseteq|supseteq|emptyset|exists|forall|approx|therefore|iff|ln|log|min|max|inf|sup|because|sin|cos|tan|atan|asin|acos|sec|csc";
 
 const defaultSnippets = [
     { trigger: "\\b(" + GREEK + ")", replacement: "\\[[1]]", isRegex: true, showGuide: "alpha" },
@@ -41,6 +41,7 @@ const defaultSnippets = [
     { trigger: "mbb", replacement: "\\mathbb{$0}" },
     { trigger: "mca", replacement: "\\mathcal{$0}" },
     { trigger: "txt", replacement: "\\text{$0}" },
+    { trigger: "bm", replacement: "\\boldsymbol{$0}" },
     { trigger: "//", replacement: "\\frac{$0}{$1}" },
     { trigger: "^", replacement: "^{$0}" },
     { trigger: "_", replacement: "_{$0}" },
@@ -157,6 +158,7 @@ document.querySelectorAll('.color-dot[data-color]').forEach(dot => {
         document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
         this.classList.add('active');
         activeColor = this.dataset.color;
+        updatePreview();
     };
 });
 
@@ -164,6 +166,7 @@ customColorInput.oninput = (e) => {
     document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
     document.querySelector('.color-dot:last-of-type').classList.add('active');
     activeColor = e.target.value;
+    updatePreview();
 };
 
 fontSizeInput.oninput = updatePreview;
@@ -239,20 +242,87 @@ async function insertVector() {
             svgClone.setAttribute('height', (viewBox[3] * svgUnitsToPx).toFixed(4) + 'px');
         }
 
-        svgClone.querySelectorAll('path, rect').forEach(el => {
-            el.setAttribute('fill', activeColor);
-            el.setAttribute('stroke', 'none');
+        // ── 색상 및 선 처리 ────────────────────────────────────────
+        const MIN_BORDER_THICKNESS = 60; // 얇은 선 기준을 60으로 설정하여 PPT 렌더링 증발 방지
+
+        svgClone.querySelectorAll('path, rect, line, polyline, polygon').forEach(el => {
+            const tag = el.tagName.toLowerCase();
+
+            if (tag === 'rect') {
+                const h = parseFloat(el.getAttribute('height') || '0');
+                const w = parseFloat(el.getAttribute('width') || '0');
+                const isThinH = h > 0 && h < MIN_BORDER_THICKNESS;
+                const isThinW = w > 0 && w < MIN_BORDER_THICKNESS;
+
+                if (isThinH || isThinW) {
+                    // 얇은 사각형(테두리/분수선) 처리
+                    el.setAttribute('fill', activeColor);
+                    el.setAttribute('stroke', 'none');
+                    el.setAttribute('shape-rendering', 'crispEdges'); // ✨ 핵심: 선 뭉개짐(안티앨리어싱) 방지
+
+                    // 두께를 60으로 키우되, 원래 중심축을 유지하도록 좌표(x, y) 보정
+                    if (isThinH) {
+                        const oldY = parseFloat(el.getAttribute('y') || '0');
+                        el.setAttribute('y', String(oldY - (MIN_BORDER_THICKNESS - h) / 2));
+                        el.setAttribute('height', String(MIN_BORDER_THICKNESS));
+                    }
+                    if (isThinW) {
+                        const oldX = parseFloat(el.getAttribute('x') || '0');
+                        el.setAttribute('x', String(oldX - (MIN_BORDER_THICKNESS - w) / 2));
+                        el.setAttribute('width', String(MIN_BORDER_THICKNESS));
+                    }
+                } else {
+                    // 두꺼운 사각형(배경색 등)
+                    const existingFill = el.getAttribute('fill') || '';
+                    if (existingFill !== 'none' && existingFill !== 'transparent') {
+                        el.setAttribute('fill', activeColor);
+                    }
+                    el.setAttribute('stroke', 'none');
+                }
+
+            } else if (tag === 'line' || tag === 'polyline') {
+                el.setAttribute('stroke', activeColor);
+                el.setAttribute('fill', 'none');
+                el.setAttribute('shape-rendering', 'crispEdges'); // 선 요소 뭉개짐 방지
+
+                const sw = parseFloat(el.getAttribute('stroke-width') || '0');
+                if (sw < MIN_BORDER_THICKNESS) {
+                    el.setAttribute('stroke-width', String(MIN_BORDER_THICKNESS));
+                }
+
+            } else if (tag === 'path') {
+                const existingStroke = el.getAttribute('stroke');
+                if (existingStroke && existingStroke !== 'none') {
+                    // 테두리 역할을 하는 path
+                    el.setAttribute('stroke', activeColor);
+                    el.setAttribute('shape-rendering', 'crispEdges'); // 뭉개짐 방지
+
+                    const sw = parseFloat(el.getAttribute('stroke-width') || '0');
+                    if (sw < MIN_BORDER_THICKNESS) {
+                        el.setAttribute('stroke-width', String(MIN_BORDER_THICKNESS));
+                    }
+                } else {
+                    // 일반 글자/수식 글리프
+                    el.setAttribute('fill', activeColor);
+                    el.setAttribute('stroke', 'none');
+                }
+
+            } else {
+                // 그 외 요소
+                el.setAttribute('fill', activeColor);
+                el.setAttribute('stroke', 'none');
+            }
         });
+
+        // ── data-* 속성 제거 ───────────────────────────────────────
         svgClone.querySelectorAll('*').forEach(el => {
             Array.from(el.attributes).forEach(attr => {
                 if (attr.name.startsWith('data-')) el.removeAttribute(attr.name);
             });
         });
 
-        const finalSvg = svgClone.outerHTML
-            .replace(/fill="currentColor"/g, "")
-            .replace(/stroke="currentColor"/g, "")
-            .replace(/currentColor/g, activeColor);
+        // ── currentColor 치환 후 전송 ──────────────────────────────
+        const finalSvg = svgClone.outerHTML.replace(/currentColor/g, activeColor);
 
         if (currentHost === Office.HostType.PowerPoint) {
             await performReplacementPPT(tex, finalSvg);
@@ -439,20 +509,46 @@ async function onSelectionChangedWord() {
 }
 
 // ==========================================
-// 렌더링 및 스니펫
+// 렌더링 및 스니펫 
 // ==========================================
 function updatePreview() {
     const tex = editor.value.replace(/\$\$/g, "");
-    preview.style.fontSize = "18pt";
+    
+    // 1. 기본 폰트 크기 설정
+    const defaultSize = 18;
+    const minSize = 12;
+    preview.style.fontSize = defaultSize + "pt";
+
+    // 2. 다크모드 색상 반전 로직 (검정색 선택 시 프리뷰만 흰색으로)
     const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    preview.style.color = isDark ? "#ffffff" : "#000000";
+    let displayColor = activeColor;
+    if (isDark && (activeColor === "#000000" || activeColor.toLowerCase() === "#000")) {
+        displayColor = "#ffffff";
+    }
+    preview.style.color = displayColor;
 
     if (window.MathJax && window.MathJax.tex2svgPromise) {
         MathJax.texReset();
         MathJax.tex2svgPromise(tex).then(node => {
             preview.innerHTML = '';
             preview.appendChild(node);
-        }).catch(err => { });
+
+            // 3. ✨ 미리보기 창 초과 시 글자 크기 자동 축소 로직
+            const mathWidth = node.getBoundingClientRect().width;
+            const availableWidth = previewPane.clientWidth - 30; // 좌우 패딩 15px씩 제외
+
+            // 수식 너비가 가용 너비보다 클 경우 비율에 맞춰 축소
+            if (mathWidth > availableWidth && availableWidth > 0) {
+                const scaleRatio = availableWidth / mathWidth;
+                let newSize = Math.floor(defaultSize * scaleRatio);
+                
+                // 아무리 길어도 최소 12pt 밑으로는 작아지지 않도록 방어
+                newSize = Math.max(minSize, newSize);
+                preview.style.fontSize = newSize + "pt";
+            }
+        }).catch(err => { 
+            // 타이핑 중 발생하는 일시적인 문법 오류는 무시
+        });
     }
 }
 
