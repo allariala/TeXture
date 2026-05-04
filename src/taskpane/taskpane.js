@@ -40,7 +40,7 @@ const defaultSnippets = [
     { trigger: "mbf", replacement: "\\mathbf{$0}" },
     { trigger: "mbb", replacement: "\\mathbb{$0}" },
     { trigger: "mca", replacement: "\\mathcal{$0}" },
-    { trigger: "txt", replacement: "\\text{$0}" },
+    { trigger: "tt", replacement: "\\text{$0}" },
     { trigger: "bm", replacement: "\\boldsymbol{$0}" },
     { trigger: "//", replacement: "\\frac{$0}{$1}" },
     { trigger: "^", replacement: "^{$0}" },
