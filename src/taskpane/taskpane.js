@@ -255,9 +255,7 @@ async function insertVector() {
                 const isThinW = w > 0 && w < MIN_BORDER_THICKNESS;
 
                 if (isThinH || isThinW) {
-                    // 얇은 사각형(테두리/분수선) 처리
-                    el.setAttribute('fill', activeColor);
-                    el.setAttribute('stroke', 'none');
+                    // 얇은 사각형(테두리/분수선) 처리 (색상 덮어쓰기 제거됨)
                     el.setAttribute('shape-rendering', 'crispEdges'); // ✨ 핵심: 선 뭉개짐(안티앨리어싱) 방지
 
                     // 두께를 60으로 키우되, 원래 중심축을 유지하도록 좌표(x, y) 보정
@@ -271,18 +269,10 @@ async function insertVector() {
                         el.setAttribute('x', String(oldX - (MIN_BORDER_THICKNESS - w) / 2));
                         el.setAttribute('width', String(MIN_BORDER_THICKNESS));
                     }
-                } else {
-                    // 두꺼운 사각형(배경색 등)
-                    const existingFill = el.getAttribute('fill') || '';
-                    if (existingFill !== 'none' && existingFill !== 'transparent') {
-                        el.setAttribute('fill', activeColor);
-                    }
-                    el.setAttribute('stroke', 'none');
                 }
 
             } else if (tag === 'line' || tag === 'polyline') {
-                el.setAttribute('stroke', activeColor);
-                el.setAttribute('fill', 'none');
+                // (색상 덮어쓰기 제거됨)
                 el.setAttribute('shape-rendering', 'crispEdges'); // 선 요소 뭉개짐 방지
 
                 const sw = parseFloat(el.getAttribute('stroke-width') || '0');
@@ -293,24 +283,14 @@ async function insertVector() {
             } else if (tag === 'path') {
                 const existingStroke = el.getAttribute('stroke');
                 if (existingStroke && existingStroke !== 'none') {
-                    // 테두리 역할을 하는 path
-                    el.setAttribute('stroke', activeColor);
+                    // 테두리 역할을 하는 path (색상 덮어쓰기 제거됨)
                     el.setAttribute('shape-rendering', 'crispEdges'); // 뭉개짐 방지
 
                     const sw = parseFloat(el.getAttribute('stroke-width') || '0');
                     if (sw < MIN_BORDER_THICKNESS) {
                         el.setAttribute('stroke-width', String(MIN_BORDER_THICKNESS));
                     }
-                } else {
-                    // 일반 글자/수식 글리프
-                    el.setAttribute('fill', activeColor);
-                    el.setAttribute('stroke', 'none');
                 }
-
-            } else {
-                // 그 외 요소
-                el.setAttribute('fill', activeColor);
-                el.setAttribute('stroke', 'none');
             }
         });
 
