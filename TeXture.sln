@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TeXture.Core", "windows\TeXture.Core\TeXture.Core.csproj", "{6C1F2B7A-3E4D-4B8A-9C5E-2A7D8F1B3C40}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerLaTeX", "windows\PowerPoint\PowerLaTeX.csproj", "{BE9079BE-E9FD-4F38-A1B1-29BCCA1E578A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WordLaTeX", "windows\Word\WordLaTeX.csproj", "{3926F977-A4FA-431A-84BC-201485F2DA98}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6C1F2B7A-3E4D-4B8A-9C5E-2A7D8F1B3C40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C1F2B7A-3E4D-4B8A-9C5E-2A7D8F1B3C40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C1F2B7A-3E4D-4B8A-9C5E-2A7D8F1B3C40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C1F2B7A-3E4D-4B8A-9C5E-2A7D8F1B3C40}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE9079BE-E9FD-4F38-A1B1-29BCCA1E578A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE9079BE-E9FD-4F38-A1B1-29BCCA1E578A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE9079BE-E9FD-4F38-A1B1-29BCCA1E578A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE9079BE-E9FD-4F38-A1B1-29BCCA1E578A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3926F977-A4FA-431A-84BC-201485F2DA98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3926F977-A4FA-431A-84BC-201485F2DA98}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3926F977-A4FA-431A-84BC-201485F2DA98}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3926F977-A4FA-431A-84BC-201485F2DA98}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A7E3C2D1-4B5F-4E6A-8C9D-0F1E2D3C4B5A}
+	EndGlobalSection
+EndGlobal

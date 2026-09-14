@@ -1,2 +1,45 @@
-node_modules
-capture
+# ---------------------------------------------------------------
+# Build output / IDE state
+# ---------------------------------------------------------------
+bin/
+obj/
+.vs/
+*.user
+*.suo
+packages/
+node_modules/
+__pycache__/
+*.pyc
+publish/
+
+# Installer output and generated key include
+/windows/installer/Output/
+/windows/installer/keys.generated.iss
+
+# PyInstaller work folders (the OCR engine is built locally; see README)
+/windows/capture/build/
+/windows/capture/dist/
+/windows/capture/Backup/
+/windows/capture/.vscode/
+
+# Mac web add-in build output
+/mac/dist/
+
+# ---------------------------------------------------------------
+# Heavy binaries (~3 GB): NN models, bundled OCR server, installers.
+# The small model configs/tokenizer (windows/capture/models/*.json) ARE tracked.
+# ---------------------------------------------------------------
+*.pt
+*.safetensors
+*.exe
+*.pkg
+*.pyz
+
+# ---------------------------------------------------------------
+# Secrets (code-signing keys never go into git)
+# ---------------------------------------------------------------
+*.pfx
+*.snk
+
+# Local tooling
+.claude/

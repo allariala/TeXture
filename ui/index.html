@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TeXture</title>
+  <link rel="stylesheet" href="css/app.css">
+  <script>
+    // Host + theme are known from the URL before first paint, so there is no flash of the wrong theme.
+    (function () {
+      var q = new URLSearchParams(location.search);
+      var root = document.documentElement;
+      root.dataset.host = q.get('host') === 'word' ? 'word' : 'ppt';
+      root.dataset.surface = q.get('surface') || 'pane';
+      root.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    })();
+    window.MathJax = {
+      loader: { load: [] },
+      startup: { typeset: false },
+      options: { enableMenu: false, menuOptions: { settings: { assistiveMml: false } } },
+      tex: {
+        // Undefined commands become real errors (shown in the error pill) instead of red text in the slide.
+        packages: { '[-]': ['noundefined', 'noerrors'] }
+      },
+      svg: { fontCache: 'none' }
+    };
+  </script>
+  <script src="vendor/mathjax/tex-svg-full.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="size" data-i18n-title="size.title">
+      <button class="icon-btn small" id="sizeDown" data-i18n-aria="size.down">−</button>
+      <input id="fontSize" type="number" min="4" max="200" step="0.5" value="18" aria-label="Font size in points">
+      <span class="unit">pt</span>
+      <button class="icon-btn small" id="sizeUp" data-i18n-aria="size.up">+</button>
+    </div>
+    <div class="colors" id="colors" data-i18n-title="colors.title"></div>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="btnPalette" data-i18n-title="palette.toggle" data-i18n-aria="palette.toggle">
+      <svg viewBox="0 0 20 20"><path d="M3 3h5v5H3zM12 3h5v5h-5zM3 12h5v5H3zM12 12h5v5h-5z"/></svg>
+    </button>
+    <button class="icon-btn" id="btnCapture" data-i18n-title="capture.title" data-i18n-aria="capture.title">
+      <svg viewBox="0 0 20 20"><path d="M2 6V3h3M15 3h3v3M18 14v3h-3M5 17H2v-3"/><path d="M6.5 13.5 9 7l2.5 6.5M7.4 11.3h3.2M12.5 13.5h2"/></svg>
+    </button>
+    <button class="icon-btn" id="btnSettings" data-i18n-title="settings.title" data-i18n-aria="settings.title">
+      <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.3 4.7l-1.4 1.4M6.1 13.9l-1.4 1.4M15.3 15.3l-1.4-1.4M6.1 6.1 4.7 4.7"/></svg>
+    </button>
+  </header>
+
+  <section class="palette" id="palette">
+    <nav class="palette-tabs" id="paletteTabs" role="tablist"></nav>
+    <div class="palette-grid" id="paletteGrid"></div>
+  </section>
+
+  <main class="editor-wrap" id="editorWrap">
+    <textarea id="editor" spellcheck="false" autocomplete="off" autocapitalize="off"
+              data-i18n-placeholder="editor.placeholder"></textarea>
+    <div class="popup ac" id="acPopup" hidden></div>
+    <div class="popup chord" id="chordPopup" hidden></div>
+  </main>
+
+  <div class="resizer" id="resizer" data-i18n-title="preview.resize"></div>
+
+  <section class="preview" id="previewPane">
+    <div class="preview-canvas" id="preview"></div>
+    <div class="preview-empty" id="previewEmpty" data-i18n="preview.empty"></div>
+    <div class="pill error" id="errorPill" hidden></div>
+  </section>
+
+  <footer class="actions">
+    <button class="primary" id="btnInsert">
+      <span id="insertLabel" data-i18n="btn.insert"></span><kbd>Ctrl+Enter</kbd>
+    </button>
+    <button class="ghost" id="btnNew" data-i18n-title="btn.new.title" hidden>
+      <svg viewBox="0 0 20 20"><path d="M10 4v12M4 10h12"/></svg><span data-i18n="btn.new"></span>
+    </button>
+    <button class="ghost" id="btnRevert" data-i18n-title="btn.revert.title" hidden>
+      <svg viewBox="0 0 20 20"><path d="M5 8h7a4 4 0 0 1 0 8H8"/><path d="M8 5 5 8l3 3"/></svg><span data-i18n="btn.revert"></span>
+    </button>
+    <button class="ghost icon-only" id="btnClear" data-i18n-title="btn.clear.title" data-i18n-aria="btn.clear.title">
+      <svg viewBox="0 0 20 20"><path d="M5 5l10 10M15 5 5 15"/></svg>
+    </button>
+  </footer>
+
+  <div class="statusbar">
+    <div class="mode-chip" id="modeChip" title="">
+      <span class="mode-dot"></span>
+      <span id="modeLabel"></span>
+      <span class="unsaved" id="unsavedDot" data-i18n-title="mode.unsaved" hidden></span>
+    </div>
+    <span id="statusNote" class="note"></span>
+    <span class="spacer"></span>
+    <span class="server" id="serverStatus" data-i18n-title="server.title"><i class="led"></i><span id="serverLabel"></span></span>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="sheet-backdrop" id="settingsBackdrop" hidden></div>
+  <aside class="sheet" id="settingsSheet" hidden aria-label="Settings"></aside>
+</body>
+</html>
