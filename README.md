@@ -94,25 +94,6 @@ tools/serve-ui.py   run the editor UI in a browser with a mock Office host
 TeXture.sln
 ```
 
-## Building the Windows release
-
-Prerequisites: Visual Studio 2022 with the *Office/SharePoint development* workload, Inno Setup 6, PowerShell 7,
-and for the OCR engine a Python environment with `texify`, `torch`, `fastapi`, `uvicorn`, `pyinstaller`.
-
-1. **Signing certificate (once per build machine).** `pwsh windows\installer\new-signing-cert.ps1` creates a
-   100-year self-signed code-signing certificate in your certificate store and puts its thumbprint in both projects.
-   Keep a backup of it (`certmgr.msc` → Personal → Certificates → Export, with private key) if you want future
-   builds to be signed by the same publisher.
-2. **OCR engine.** In `windows/capture/`: `python model_download.py` (downloads texify into `models/`),
-   `python compress_model.py` (→ `texify_quantized.pt`, rename to `texify_model.pt`), then
-   `pyinstaller --noconfirm texture_capture.spec` (→ `dist/texture_capture/`). Binaries are not in git.
-3. `pwsh windows\installer\build.ps1` → `windows\installer\Output\TeXture_Install_v2.0.0.exe`.
-
-Command-line builds never change your Office add-in registration; F5 in Visual Studio registers the debug build as usual.
-
-UI development without Office: `python tools/serve-ui.py 8766` and open
-`http://127.0.0.1:8766/index.html?host=ppt` (`window.__texture.select({...})` simulates a selected equation).
-
 ## License
 
 MIT — see [LICENSE](LICENSE). Third-party components and the GPL-licensed OCR engine are listed in
