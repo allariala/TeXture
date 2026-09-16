@@ -222,7 +222,7 @@ export async function createOfficeHost(dispatch) {
       switch (msg.type) {
         case 'ready':
           send({
-            type: 'init', host: 'ppt', surface: 'pane', version: '2.0.0',
+            type: 'init', host: 'ppt', surface: 'pane', version: '2.0.1',
             settings: deepMerge(defaults(), store.get('settings', {})),
             state: store.get('state.ppt', {}),
             snippets: store.get('snippets', null),

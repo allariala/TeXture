@@ -43,3 +43,6 @@ publish/
 
 # Local tooling
 .claude/
+
+# Release notes are attached to GitHub Releases, not committed
+/RELEASE_NOTES_*.md

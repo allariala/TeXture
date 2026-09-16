@@ -8,7 +8,7 @@
 ;  - Never kills PowerPoint/Word: asks the user to close them.
 ;  - Real uninstaller (Apps & features), removes registry entries and files.
 
-#define AppVersion "2.0.0"
+#define AppVersion "2.0.1"
 #define Root "..\.."
 #define Assets "assets"
 #define PptBin "..\PowerPoint\bin\Release"

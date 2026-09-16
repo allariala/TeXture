@@ -1,7 +1,9 @@
-# TeXture 2.0 — handover (session 4)
+# TeXture 2.0 — handover (session 5)
 
-Repository root: `TeXture 2.0/` (branch `refactor/unified-core`). Build: `pwsh windows\installer\build.ps1`
-→ `windows\installer\Output\TeXture_Install_v2.0.0.exe` (≈518 MB, built this session).
+2.0.1: snippets insert no trailing space; Mac toolbar avoids the task pane button; gear settings icon.
+
+Repository: github.com/allariala/TeXture (branch `main`). Build: `pwsh windows\installer\build.ps1`
+→ `windows\installer\Output\TeXture_Install_v2.0.1.exe` (≈518 MB, built this session).
 
 ## Session 4 — done
 - **Word table cells**: reverted to the white `.` workaround (zero-width characters do not hold Word's baseline).
@@ -23,7 +25,7 @@ Repository root: `TeXture 2.0/` (branch `refactor/unified-core`). Build: `pwsh w
 ## Next steps
 1. Test the Mac add-in: publish the repo (Pages: `main`, `/`), sideload `mac/manifest.xml`, check insert/edit/
    size/colour/snippets in PowerPoint for Mac.
-2. Install 2.0.0 (with OCR v2) on Windows and check capture from the button and `Alt+Shift+S`.
+2. Install 2.0.1 (with OCR v2) on Windows and check capture from the button and `Alt+Shift+S`.
 3. Back up the signing certificate (certmgr → Personal → "TeXture Add-in Signing" → Export with private key).
 
 ## Notes

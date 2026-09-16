@@ -95,8 +95,6 @@ export class TexEditor {
       if (firstSlot === null && !(m[1] === '0' && payload)) firstSlot = out.length;
       out += SLOT;
     }
-    // A control word at the very end gets a space so the next letter does not merge into it (\alpha x).
-    if (/\\[A-Za-z]+$/.test(out) && !/^[A-Za-z]/.test(this.el.value.slice(end, end + 1) || ' ')) out += ' ';
 
     const base = start;
     if (caret !== null) this.replace(start, end, out, base + caret, base + caret);

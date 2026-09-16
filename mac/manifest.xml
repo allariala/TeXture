@@ -8,7 +8,7 @@
 -->
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
   <Id>736807ec-0351-4800-af21-e114562a63f2</Id>
-  <Version>2.0.0.0</Version>
+  <Version>2.0.1.0</Version>
   <ProviderName>Allariala</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="TeXture"/>

@@ -530,5 +530,11 @@ textarea.json {
 h3.sec { font-size: 12px; color: var(--text-2); text-transform: uppercase; letter-spacing: .04em; margin: 16px 0 6px; }
 h3.sec:first-child { margin-top: 0; }
 
+/* Office web add-in (Mac): the task pane draws its own "..." / add-in info button over the top-right
+   corner of our page, so the toolbar buttons move down out of its way. */
+:root[data-platform="office"] .topbar { padding-top: 34px; }
+:root[data-platform="office"] .topbar .icon-btn { position: relative; }
+:root[data-platform="office"] .mode-chip { margin-left: 0; }
+
 /* popup surface: slightly roomier */
 :root[data-surface="popup"] .palette-grid { max-height: 150px; }

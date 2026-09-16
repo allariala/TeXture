@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1 (Windows / Mac)
+
+- Snippets and shortcuts no longer add a space after the command (`theta` → `\theta`, `min` → `\min`),
+  so subscripts and superscripts can be typed straight after them.
+- Mac: the toolbar no longer sits under the task pane's own add-in button.
+- The settings button is a gear again (the old icon looked like a light/dark switch).
+
 ## 2.0.0 (Windows)
 
 Complete rework of the Windows add-ins on one shared code base.

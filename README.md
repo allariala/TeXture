@@ -23,7 +23,7 @@ engine that turns a screenshot of an equation into LaTeX.
 Windows/Office installations; the installer warns if one is missing).
 
 1. **Uninstalling 1.2.x?** Remove *TeXture (PowerPoint)* and *TeXture (Word)* in *Settings → Apps* first.
-2. Download `TeXture_Install_v2.0.0.exe` from the Releases page.
+2. Download `TeXture_Install_v2.0.1.exe` from the Releases page.
 3. **Close PowerPoint and Word**, then run the installer (administrator rights are required; it installs for
    all users into `C:\Program Files\TeXture`).
 4. Start PowerPoint or Word → **TeXture** tab.
@@ -69,7 +69,7 @@ folder `/ (root)`. Equations made on Mac and Windows are interchangeable (same `
 
 **Windows**
 1. 이전 버전(1.2.x)이 있다면 *설정 → 앱*에서 *TeXture (PowerPoint)*, *TeXture (Word)*를 먼저 제거합니다.
-2. `TeXture_Install_v2.0.0.exe`를 내려받습니다.
+2. `TeXture_Install_v2.0.1.exe`를 내려받습니다.
 3. **PowerPoint와 Word를 모두 종료**한 뒤 설치 파일을 실행합니다(관리자 권한 필요).
 4. PowerPoint/Word의 **TeXture** 탭에서 사용합니다. 설정 → 언어에서 한국어/English를 바꿀 수 있습니다.
 
