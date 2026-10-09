@@ -2,16 +2,16 @@
 #   pwsh windows\installer\new-signing-cert.ps1
 #
 # - Self-signed code-signing certificate valid for 100 years, stored in CurrentUser\My (private key stays
-#   on this machine; back it up with certmgr.msc -> Personal -> Certificates -> Export if you want).
+#   on this machine and is non-exportable; rebuilds must use this signing machine).
 # - Public part exported to windows\installer\assets\TeXture-signing.cer (safe to commit).
 # - ManifestCertificateThumbprint updated in both add-in projects.
-# The installer adds the public certificate to the machine's Trusted Publishers / Trusted Root stores, so
-# the add-ins load for every user without a trust prompt and never run into certificate expiry.
+# The installer does not add this certificate to any trust store. VSTO trusts the admin-installed,
+# signed add-ins under Program Files. The long validity supports the user's final offline release.
 $ErrorActionPreference = 'Stop'
 $root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 
 $cert = New-SelfSignedCertificate -Subject 'CN=TeXture Add-in Signing' -FriendlyName 'TeXture Add-in Signing' `
-    -Type CodeSigningCert -KeyAlgorithm RSA -KeyLength 3072 -HashAlgorithm SHA256 -KeyExportPolicy Exportable `
+    -Type CodeSigningCert -KeyAlgorithm RSA -KeyLength 3072 -HashAlgorithm SHA256 -KeyExportPolicy NonExportable `
     -NotAfter (Get-Date).AddYears(100) -CertStoreLocation 'Cert:\CurrentUser\My' `
     -TextExtension @('2.5.29.19={critical}{text}ca=false')   # not a CA: it cannot issue other certificates
 

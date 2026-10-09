@@ -16,9 +16,13 @@
       root.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     })();
     window.MathJax = {
-      loader: { load: [] },
+      loader: { load: ['ui/safe'], source: { 'ui/safe': '[mathjax]/safe.js' } },
       startup: { typeset: false },
-      options: { enableMenu: false, menuOptions: { settings: { assistiveMml: false } } },
+      options: {
+        enableMenu: false,
+        menuOptions: { settings: { assistiveMml: false } },
+        safeOptions: { allow: { URLs: 'none', classes: 'none', cssIDs: 'none', styles: 'safe' } }
+      },
       tex: {
         // Undefined commands become real errors (shown in the error pill) instead of red text in the slide.
         packages: { '[-]': ['noundefined', 'noerrors'] }

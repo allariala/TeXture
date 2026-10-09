@@ -18,13 +18,15 @@ Microsoft Office. The ribbon icons are drawn at runtime with the Windows font *C
 
 The screen-capture recognition engine is a **separate program** (it runs in its own process and talks to the add-in
 over a local HTTP connection). Because it bundles texify, the engine binary is distributed under the
-**GNU GPL v3** ([`licenses/GPL-3.0.txt`](licenses/GPL-3.0.txt)); its complete source is in
-[`windows/capture/`](windows/capture). The MIT license of the rest of TeXture is not affected (mere aggregation).
+**GNU GPL v3** ([`licenses/GPL-3.0.txt`](licenses/GPL-3.0.txt)); TeXture's engine source and dependency pins are in
+[`windows/capture/`](windows/capture). A binary release must also provide the corresponding source for its
+bundled GPL dependencies; see [`windows/capture/BUILD.md`](windows/capture/BUILD.md).
+The MIT license of the rest of TeXture is not affected (mere aggregation).
 
 | Component | License |
 |---|---|
 | [texify](https://github.com/VikParuchuri/texify) 0.2.1 (code) | GPL-3.0-or-later |
-| texify model weights (`vikp/texify` on Hugging Face, quantised copy `texify_model.pt`) | see the [model card](https://huggingface.co/vikp/texify) for the current terms |
+| texify model weights (`vikp/texify` on Hugging Face, quantised state dictionary `texify_weights.pt`) | see the [model card](https://huggingface.co/vikp/texify) for the current terms |
 | [PyTorch](https://pytorch.org/) | BSD-3-Clause |
 | [Hugging Face Transformers](https://github.com/huggingface/transformers) | Apache-2.0 |
 | [FastAPI](https://github.com/tiangolo/fastapi) / [Starlette](https://github.com/encode/starlette) | MIT / BSD-3-Clause |
@@ -38,5 +40,5 @@ over a local HTTP connection). Because it bundles texify, the engine binary is d
 
 ## Mac web add-in (`mac/`)
 
-Uses MathJax 3 from the jsDelivr CDN (Apache-2.0) and the Office JavaScript API; see `mac/package.json` for the
-development dependencies (not shipped to users).
+Uses the shared vendored MathJax 3.2.2 (Apache-2.0) and the Microsoft-hosted Office JavaScript API.
+The editor is served by GitHub Pages; unlike Windows, the Mac version requires network access.

@@ -17,13 +17,12 @@ namespace TeXture.Core.Capture
     /// <summary>
     /// Owns the connection to the local OCR server (texture_capture.exe).
     ///
-    /// API v2 servers (this release) are shared: PowerPoint and Word attach to one process, found via
+    /// API v3 servers are shared: PowerPoint and Word attach to one process, found via
     /// %LOCALAPPDATA%\TeXture\capture_server.json. The server watches its client PIDs and exits when the
     /// last Office process is gone, so closing PowerPoint never breaks capture in Word, and nobody kills
     /// processes by name. Requests carry a per-launch token.
     ///
-    /// API v1 servers (the v1.2 exe) cannot be shared: each Office process starts its own, bound to a job
-    /// object so it dies with Office, and only that exact process is stopped on shutdown.
+    /// Older OCR APIs are deliberately rejected.
     /// </summary>
     public sealed class CaptureService : IDisposable
     {
@@ -31,15 +30,13 @@ namespace TeXture.Core.Capture
         private const string LaunchMutex = @"Local\TeXture.CaptureServer.Launch";
         private static readonly TimeSpan StartupTimeout = TimeSpan.FromSeconds(90);
 
-        private readonly HttpClient _http = new HttpClient { Timeout = TimeSpan.FromSeconds(120) };
+        private readonly HttpClient _http = new HttpClient(new HttpClientHandler { UseProxy = false, AllowAutoRedirect = false })
+            { Timeout = TimeSpan.FromSeconds(120) };
         private readonly string _infoPath = Path.Combine(Paths.LocalDir, "capture_server.json");
         private readonly SemaphoreSlim _gate = new SemaphoreSlim(1, 1);
 
         private int _port = -1;
         private string _token;
-        private int _api;
-        private Process _ownedLegacyProcess;
-        private JobObject _job;
 
         public event Action<string> StatusChanged;
 
@@ -92,14 +89,12 @@ namespace TeXture.Core.Capture
                 SetStatus("Processing...");
                 try
                 {
-                    using (var content = new MultipartFormDataContent())
                     using (var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read))
                     using (var file = new StreamContent(stream))
                     using (var request = new HttpRequestMessage(HttpMethod.Post, $"http://127.0.0.1:{_port}/predict"))
                     {
                         file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-                        content.Add(file, "file", Path.GetFileName(imagePath));
-                        request.Content = content;
+                        request.Content = file;
                         AddToken(request);
 
                         using (var response = await _http.SendAsync(request).ConfigureAwait(true))
@@ -132,14 +127,13 @@ namespace TeXture.Core.Capture
             int port = (int)(info.GetDouble("port") ?? -1);
             int pid = (int)(info.GetDouble("pid") ?? -1);
             string token = info.GetString("token");
-            if (port <= 0 || !IsAlive(pid)) return false;
+            if (port <= 0 || port > 65535 || string.IsNullOrEmpty(token) || !IsAlive(pid)) return false;
 
-            if (await IsHealthyAsync(port, token).ConfigureAwait(true) < 2) return false;
+            if (await IsHealthyAsync(port, token).ConfigureAwait(true) < 3) return false;
             if (!await PostAttachAsync(port, token).ConfigureAwait(true)) return false;
 
             _port = port;
             _token = token;
-            _api = 2;
             Log.Info($"Attached to shared capture server pid={pid} port={port}");
             return true;
         }
@@ -173,7 +167,7 @@ namespace TeXture.Core.Capture
                         CreateNoWindow = true,
                         WindowStyle = ProcessWindowStyle.Hidden,
                     };
-                    // Passed via environment so the v1 exe (strict argparse) still starts.
+                    // Never put the authentication token on a visible command line.
                     psi.EnvironmentVariables["TEXTURE_TOKEN"] = token;
                     psi.EnvironmentVariables["TEXTURE_PARENT_PID"] = Process.GetCurrentProcess().Id.ToString();
 
@@ -188,7 +182,7 @@ namespace TeXture.Core.Capture
                         if (api > 0) break;
                         await Task.Delay(700).ConfigureAwait(true);
                     }
-                    if (api == 0)
+                    if (api < 3)
                     {
                         Log.Error("Capture server did not become healthy" + (process.HasExited ? $" (exit code {process.ExitCode})" : ""));
                         TryKill(process);
@@ -197,19 +191,8 @@ namespace TeXture.Core.Capture
 
                     _port = port;
                     _token = token;
-                    _api = api;
 
-                    if (api >= 2)
-                    {
-                        WriteInfo(process.Id, port, token, api);
-                    }
-                    else
-                    {
-                        // Legacy exe: private to this Office process and bound to its lifetime.
-                        _ownedLegacyProcess = process;
-                        _job = _job ?? new JobObject();
-                        _job.Assign(process);
-                    }
+                    WriteInfo(process.Id, port, token, api);
                     return true;
                 }
                 finally
@@ -219,7 +202,7 @@ namespace TeXture.Core.Capture
             }
         }
 
-        /// <summary>Returns the server API level (1 = v1.2 exe, 2 = shared server) or 0 if unreachable.</summary>
+        /// <summary>Returns a supported authenticated API level or 0 if unreachable/incompatible.</summary>
         private async Task<int> IsHealthyAsync(int port, string token)
         {
             try
@@ -232,7 +215,8 @@ namespace TeXture.Core.Capture
                     {
                         if (!response.IsSuccessStatusCode) return 0;
                         var body = Json.ParseObject(await response.Content.ReadAsStringAsync().ConfigureAwait(true));
-                        return (int)(body.GetDouble("api") ?? 1);
+                        int api = (int)(body?.GetDouble("api") ?? 0);
+                        return api >= 3 ? api : 0;
                     }
                 }
             }
@@ -353,14 +337,7 @@ namespace TeXture.Core.Capture
 
         public void Dispose()
         {
-            // Shared (v2) servers shut themselves down when their last client exits.
-            if (_ownedLegacyProcess != null)
-            {
-                TryKill(_ownedLegacyProcess);
-                _ownedLegacyProcess.Dispose();
-                _ownedLegacyProcess = null;
-            }
-            _job?.Dispose();
+            // Shared servers shut themselves down when their last client exits.
             _http.Dispose();
         }
     }

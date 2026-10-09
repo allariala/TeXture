@@ -6,7 +6,7 @@ engine that turns a screenshot of an equation into LaTeX.
 
 > 한국어 요약: TeXture는 PowerPoint·Word용 LaTeX 수식 편집기입니다. 아래 [빠른 설치](#빠른-설치-한국어)를 참고하세요.
 
-| | Windows (2.0) | Mac |
+| | Windows (2.1) | Mac |
 |---|---|---|
 | PowerPoint | ✅ | ✅ |
 | Word | ✅ (incl. equation numbering) | — |
@@ -18,21 +18,30 @@ engine that turns a screenshot of an equation into LaTeX.
 
 ## Install on Windows
 
-**Requirements:** Windows 10/11, desktop Microsoft 365 / Office 2016 or later (32- or 64-bit),
+**Requirements:** 64-bit Windows 10/11, desktop Microsoft 365 / Office 2016 or later (32- or 64-bit),
 .NET Framework 4.7.2+, Microsoft Edge WebView2 runtime and the VSTO runtime (all present on current
 Windows/Office installations; the installer warns if one is missing).
 
 1. **Uninstalling 1.2.x?** Remove *TeXture (PowerPoint)* and *TeXture (Word)* in *Settings → Apps* first.
-2. Download `TeXture_Install_v2.0.1.exe` from the Releases page.
+2. Download `TeXture_Install_v2.1.0.exe` and its SHA256 checksum from the Releases page.
 3. **Close PowerPoint and Word**, then run the installer (administrator rights are required; it installs for
    all users into `C:\Program Files\TeXture`).
 4. Start PowerPoint or Word → **TeXture** tab.
 
-The add-ins are signed with TeXture's own code-signing certificate (CN=TeXture Add-in Signing, valid until 2126).
-The installer registers it in the PC's *Trusted Root Certification Authorities* and *Trusted Publishers* stores
-(announced on the installer's Ready page), so every Windows user can use TeXture without security prompts and the
-installation never expires. The certificate is not a CA and is only valid for code signing; uninstalling TeXture
-(*Settings → Apps → TeXture*) removes it again.
+**Updating from 2.0.x:** run the 2.1.0 installer directly; uninstalling first is unnecessary.
+Your settings in `%APPDATA%\TeXture` are retained. This security update is strongly recommended
+for existing Windows users.
+
+The add-ins, installer, uninstaller and OCR executable are signed with TeXture's own code-signing certificate.
+No certificates are added to Trusted Root or Trusted Publishers. VSTO trusts signed add-ins installed
+by an administrator under Program Files, so installation is fixed to that location. Upgrading removes the old
+TeXture certificate from the machine's trust stores. Self-signing does not provide a publicly verified identity:
+Windows/SmartScreen may still warn. Organization policies may require IT administrator approval.
+
+Windows OCR runs locally on CPU. Captures go only to the authenticated 127.0.0.1 service and are deleted after
+recognition, including failures. Captures left by forced Office termination are removed on the next capture
+once they are more than a day old. Inputs are limited to PNG,
+32 MB and 32 megapixels; the distributed engine loads verified weights without executing model objects.
 
 ### Using it
 | | |
@@ -69,9 +78,12 @@ folder `/ (root)`. Equations made on Mac and Windows are interchangeable (same `
 
 **Windows**
 1. 이전 버전(1.2.x)이 있다면 *설정 → 앱*에서 *TeXture (PowerPoint)*, *TeXture (Word)*를 먼저 제거합니다.
-2. `TeXture_Install_v2.0.1.exe`를 내려받습니다.
+2. `TeXture_Install_v2.1.0.exe`와 SHA256 확인 파일을 내려받습니다.
 3. **PowerPoint와 Word를 모두 종료**한 뒤 설치 파일을 실행합니다(관리자 권한 필요).
 4. PowerPoint/Word의 **TeXture** 탭에서 사용합니다. 설정 → 언어에서 한국어/English를 바꿀 수 있습니다.
+
+**2.0.x에서 업데이트:** 기존 버전을 제거하지 않고 2.1.0 설치 파일을 바로 실행하면 됩니다.
+`%APPDATA%\TeXture`의 사용자 설정은 유지됩니다. 기존 Windows 사용자에게 보안 업데이트를 강력히 권장합니다.
 
 **Mac** — Windows와 같은 편집기입니다(화면 캡처·단축키 제외). 2.0의 `mac/manifest.xml`을
 `~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef` 폴더에 복사(기존 파일 교체)하고 PowerPoint를
@@ -90,7 +102,6 @@ windows/
   capture/          offline OCR engine (Python, texify) — GPL-3.0, see THIRD_PARTY_NOTICES.md
   installer/        Inno Setup script, build.ps1, new-signing-cert.ps1
 mac/                Mac web add-in manifest + icons
-tools/serve-ui.py   run the editor UI in a browser with a mock Office host
 TeXture.sln
 ```
 

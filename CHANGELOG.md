@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.0 (Windows)
+
+- Preserve the 2.0.1 editor features while hardening offline OCR and deployment.
+- Delete temporary captures on success and failure; use unique names for simultaneous captures.
+- Clean up our own abandoned captures older than a day on the next capture.
+- Require authentication, reject browser origins, limit PNG size/dimensions and remove legacy OCR fallback.
+- Use integrity-checked model weights loaded with `weights_only=True`, without remote model code.
+- Update/audit OCR dependencies; restrict WebView2 messages, resources, permissions and downloads.
+- Sign the installer, uninstaller and OCR executable. Keep all-users Program Files installation
+  without adding root/publisher certificates, and remove legacy TeXture certificate trust on upgrade.
+
 ## 2.0.1 (Windows / Mac)
 
 - Snippets and shortcuts no longer add a space after the command (`theta` → `\theta`, `min` → `\min`),

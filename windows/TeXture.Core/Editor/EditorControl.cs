@@ -60,12 +60,22 @@ namespace TeXture.Core.Editor
                 settings.AreDevToolsEnabled = false;
 #endif
                 core.SetVirtualHostNameToFolderMapping(UiLocator.VirtualHost, UiLocator.UiDirectory,
-                    CoreWebView2HostResourceAccessKind.Allow);
+                    CoreWebView2HostResourceAccessKind.DenyCors);
+
+                core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+                core.WebResourceRequested += (s, e) =>
+                {
+                    if (!IsLocalResource(e.Request.Uri))
+                        e.Response = core.Environment.CreateWebResourceResponse(null, 403, "Forbidden", "");
+                };
+                core.PermissionRequested += (s, e) => e.State = CoreWebView2PermissionState.Deny;
+                core.DownloadStarting += (s, e) => e.Cancel = true;
+                core.FrameNavigationStarting += (s, e) => e.Cancel = true;
 
                 core.NavigationStarting += (s, e) =>
                 {
                     // The editor never navigates away; external links open in the default browser.
-                    if (!e.Uri.StartsWith("http://" + UiLocator.VirtualHost + "/", StringComparison.OrdinalIgnoreCase))
+                    if (!IsEditorPage(e.Uri))
                     {
                         e.Cancel = true;
                         OpenExternal(e.Uri);
@@ -140,6 +150,7 @@ namespace TeXture.Core.Editor
 
         private void OnWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
+            if (!IsEditorPage(e.Source)) return;
             Dictionary<string, object> msg;
             try { msg = Json.ParseObject(e.WebMessageAsJson); }
             catch (Exception ex) { Log.Warn("Bad message from editor", ex); return; }
@@ -149,6 +160,18 @@ namespace TeXture.Core.Editor
             // (capture overlay, file dialogs) opened inside WebMessageReceived stalled the capture flow
             // when it was started from the editor's button, while the hotkey path worked.
             BeginInvoke(new Action(() => Dispatch(msg)));
+        }
+
+        private static bool IsLocalResource(string source)
+        {
+            return Uri.TryCreate(source, UriKind.Absolute, out var uri) &&
+                uri.Scheme == "http" && uri.Host == UiLocator.VirtualHost && uri.IsDefaultPort &&
+                string.IsNullOrEmpty(uri.UserInfo);
+        }
+
+        private static bool IsEditorPage(string source)
+        {
+            return IsLocalResource(source) && new Uri(source).AbsolutePath == "/index.html";
         }
 
         private void Dispatch(Dictionary<string, object> msg)

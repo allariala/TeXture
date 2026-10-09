@@ -23,7 +23,7 @@
     <PublishUrl>publish\</PublishUrl>
     <InstallUrl />
     <TargetCulture>ko</TargetCulture>
-    <ApplicationVersion>2.0.1.0</ApplicationVersion>
+    <ApplicationVersion>2.1.0.0</ApplicationVersion>
     <AutoIncrementApplicationRevision>false</AutoIncrementApplicationRevision>
     <UpdateEnabled>false</UpdateEnabled>
     <UpdateInterval>0</UpdateInterval>
@@ -152,7 +152,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <SignManifests>true</SignManifests>
-    <ManifestCertificateThumbprint>AB15CFDF39844FCABC3564B7B87182C7EDEA3CD2</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>A771EBA290FF4E40C921176619566C3A81235751</ManifestCertificateThumbprint>
     <ApplicationIcon>TeXture_PPT.ico</ApplicationIcon>
   </PropertyGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

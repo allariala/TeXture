@@ -60,7 +60,6 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Capture\CaptureService.cs" />
-    <Compile Include="Capture\JobObject.cs" />
     <Compile Include="Editor\EditorControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

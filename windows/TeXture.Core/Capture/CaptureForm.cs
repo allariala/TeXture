@@ -18,6 +18,7 @@ namespace TeXture.Core.Capture
 
         public CaptureForm()
         {
+            RemoveAbandonedCaptures();
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
             ShowInTaskbar = false;
@@ -28,6 +29,25 @@ namespace TeXture.Core.Capture
             DoubleBuffered = true;
             KeyPreview = true;
             Bounds = SystemInformation.VirtualScreen; // all monitors
+        }
+
+        // A forced Office termination can skip finally. Only remove our own old capture files,
+        // never a live capture from another Office process or unrelated files in the temp folder.
+        private static void RemoveAbandonedCaptures()
+        {
+            try
+            {
+                foreach (string file in Directory.GetFiles(Path.GetTempPath(), "texture_capture_*.png"))
+                {
+                    string id = Path.GetFileNameWithoutExtension(file).Substring("texture_capture_".Length);
+                    if (Guid.TryParseExact(id, "N", out _) && File.GetLastWriteTimeUtc(file) < DateTime.UtcNow.AddDays(-1))
+                        try { File.Delete(file); } catch { }
+                }
+                string legacy = Path.Combine(Path.GetTempPath(), "texture_captured_math.png");
+                if (File.Exists(legacy) && File.GetLastWriteTimeUtc(legacy) < DateTime.UtcNow.AddDays(-1))
+                    try { File.Delete(legacy); } catch { }
+            }
+            catch { } // Cleanup must never prevent capture.
         }
 
         protected override void OnMouseDown(MouseEventArgs e)
@@ -71,8 +91,9 @@ namespace TeXture.Core.Capture
                 {
                     using (var g = Graphics.FromImage(bmp))
                         g.CopyFromScreen(_rect.X + Bounds.X, _rect.Y + Bounds.Y, 0, 0, _rect.Size);
-                    string path = Path.Combine(Path.GetTempPath(), "texture_captured_math.png");
-                    bmp.Save(path, ImageFormat.Png);
+                    string path = Path.Combine(Path.GetTempPath(), "texture_capture_" + Guid.NewGuid().ToString("N") + ".png");
+                    try { bmp.Save(path, ImageFormat.Png); }
+                    catch { try { File.Delete(path); } catch { } throw; }
                     CapturedImagePath = path;
                     DialogResult = DialogResult.OK;
                 }

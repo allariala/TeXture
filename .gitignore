@@ -44,5 +44,18 @@ publish/
 # Local tooling
 .claude/
 
+# Local session handover (exclude from source distribution)
+/HANDOVER.md
+
+# Additional private-key and local audit artifacts
+*.pem
+*.key
+/SECURITY_REVIEW_LOCAL.md
+windows/capture/.venv/
+windows/capture/*.local.json
+windows/capture/test-stage/
+tools/.security-test/
+windows/capture/model.sha256
+
 # Release notes are attached to GitHub Releases, not committed
 /RELEASE_NOTES_*.md

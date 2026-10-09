@@ -518,6 +518,7 @@ namespace TeXture.Core.Hosting
         {
             if (_captureBusy) return;
             _captureBusy = true;
+            string image = null;
             try
             {
                 // Only open the capture overlay once the OCR engine is really ready: capturing while it was
@@ -534,7 +535,6 @@ namespace TeXture.Core.Hosting
                     }
                 }
 
-                string image;
                 using (var overlay = new CaptureForm())
                     image = overlay.ShowDialog(OwnerFor(editor)) == DialogResult.OK ? overlay.CapturedImagePath : null;
                 if (image == null) return;
@@ -551,6 +551,11 @@ namespace TeXture.Core.Hosting
             }
             finally
             {
+                if (image != null)
+                {
+                    try { System.IO.File.Delete(image); }
+                    catch (Exception ex) { Log.Warn("Could not remove temporary capture", ex); }
+                }
                 _captureBusy = false;
             }
         }
