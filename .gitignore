@@ -14,6 +14,9 @@ publish/
 
 # Installer output and generated key include
 /windows/installer/Output/
+/windows/installer/.release-cache/
+# Generated third-party notices are distributed in the installer/source asset, not tracked in Git.
+/licenses/ocr/
 /windows/installer/keys.generated.iss
 
 # PyInstaller work folders (the OCR engine is built locally; see README)

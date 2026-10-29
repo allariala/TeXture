@@ -21,18 +21,32 @@ over a local HTTP connection). Because it bundles texify, the engine binary is d
 **GNU GPL v3** ([`licenses/GPL-3.0.txt`](licenses/GPL-3.0.txt)); TeXture's engine source and dependency pins are in
 [`windows/capture/`](windows/capture). A binary release must also provide the corresponding source for its
 bundled GPL dependencies; see [`windows/capture/BUILD.md`](windows/capture/BUILD.md).
-The MIT license of the rest of TeXture is not affected (mere aggregation).
+The companion `TeXture_Source_v2.1.1.zip` supplies a matching source snapshot,
+exact-version dependency source archives and model/configuration material.
+Obtain it beside the installer at https://github.com/allariala/TeXture/releases/tag/v2.1.1
+(or the same release's Assets list if that URL has not yet been published).
+See `SOURCE_AVAILABILITY.md`, `REBUILDING.md` and `SOURCE_INDEX.json` in the source archive.
+The add-ins and OCR are separately licensed programs communicating through a local HTTP API;
+the MIT license does not replace the OCR or third-party license terms.
 
 | Component | License |
 |---|---|
 | [texify](https://github.com/VikParuchuri/texify) 0.2.1 (code) | GPL-3.0-or-later |
-| texify model weights (`vikp/texify` on Hugging Face, quantised state dictionary `texify_weights.pt`) | see the [model card](https://huggingface.co/vikp/texify) for the current terms |
-| [PyTorch](https://pytorch.org/) | BSD-3-Clause |
+| texify model weights and derivative/configuration material (`vikp/texify`, `texify_weights.pt`) | CC BY-SA 4.0 — attribution and conversion details in `MODEL_NOTICE.md`; full terms in `licenses/CC-BY-SA-4.0.txt` |
+| [PyTorch](https://pytorch.org/) | Main project BSD-3-Clause; the distributed wheel also contains third-party code under additional licenses. Its complete collected notices are under `licenses/ocr/`. |
 | [Hugging Face Transformers](https://github.com/huggingface/transformers) | Apache-2.0 |
 | [FastAPI](https://github.com/tiangolo/fastapi) / [Starlette](https://github.com/encode/starlette) | MIT / BSD-3-Clause |
 | [Uvicorn](https://github.com/encode/uvicorn) | BSD-3-Clause |
 | [Pillow](https://github.com/python-pillow/Pillow) | MIT-CMU (HPND) |
 | [PyInstaller](https://pyinstaller.org/) bootloader | GPL-2.0 with the bootloader exception (allows distributing the built exe) |
+
+Complete collected upstream license directories, package metadata and source archive
+identities are installed under `licenses/ocr/`. These include native-component
+notices shipped with the PyTorch and NumPy distributions; their terms are not
+replaced by the short component summaries above. CPython's source/license and
+the PyInstaller bootloader source/license/exception accompany the source asset.
+The source asset includes the exact shipped model derivative under CC BY-SA 4.0;
+its earlier quantization recipe was not recorded in the inherited project.
 
 ## Build tools (not redistributed)
 

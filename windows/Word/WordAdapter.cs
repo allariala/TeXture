@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
 using TeXture.Core.Hosting;
+using TeXture.Core.Input;
 using TeXture.Core.Model;
 using TeXture.Core.Util;
 using Word = Microsoft.Office.Interop.Word;
@@ -15,6 +18,10 @@ namespace WordLaTeX
     internal sealed class WordAdapter : IHostAdapter
     {
         private readonly Word.Application _app;
+        // Word copies Title/AlternativeText (including the GUID) when pasting a picture.
+        // Session keys identify the native Word objects, never their copied metadata.
+        private readonly Dictionary<string, object> _targets = new Dictionary<string, object>();
+        private readonly KeyboardHook _enterHook;
 
         public WordAdapter(Word.Application app)
         {
@@ -22,6 +29,12 @@ namespace WordLaTeX
             _app.WindowSelectionChange += OnWindowSelectionChange;
             _app.WindowActivate += OnWindowActivate;
             _app.DocumentChange += OnDocumentChange;
+            _enterHook = new KeyboardHook { CanExecute = _ => CanHandleEquationEnter() };
+            _enterHook.SetBindings(new[]
+            {
+                new KeyValuePair<HotkeyGesture, Action>(new HotkeyGesture(Keys.Enter, false, false, false),
+                    () => InsertParagraphAfterSelectedEquation())
+            }, allowUnmodifiedKeys: true);
         }
 
         public HostKind Kind => HostKind.Word;
@@ -55,7 +68,11 @@ namespace WordLaTeX
 
         private void OnDocumentChange()
         {
-            try { WindowsChanged?.Invoke(this, EventArgs.Empty); }
+            try
+            {
+                foreach (string key in new List<string>(_targets.Keys)) FindByKey(key);
+                WindowsChanged?.Invoke(this, EventArgs.Empty);
+            }
             catch (Exception ex) { Log.Warn("DocumentChange handler", ex); }
         }
 
@@ -79,13 +96,13 @@ namespace WordLaTeX
                 {
                     var shape = sel.InlineShapes[1];
                     var meta = EquationMetadata.FromWord(SafeString(() => shape.AlternativeText), SafeString(() => shape.Title));
-                    if (meta != null) return new SelectionState { Equation = Describe(KeyOf(shape, meta), meta, shape.Width) };
+                    if (meta != null) return new SelectionState { Equation = Describe(KeyOf(shape), meta, shape.Width) };
                 }
                 else if (sel.Type == Word.WdSelectionType.wdSelectionShape && sel.ShapeRange.Count == 1)
                 {
                     var shape = sel.ShapeRange[1];
                     var meta = EquationMetadata.FromWord(SafeString(() => shape.AlternativeText), SafeString(() => shape.Title));
-                    if (meta != null) return new SelectionState { Equation = Describe(KeyOf(shape, meta), meta, shape.Width) };
+                    if (meta != null) return new SelectionState { Equation = Describe(KeyOf(shape), meta, shape.Width) };
                 }
             }
             catch (COMException ex) { Log.Warn("Reading Word selection", ex); }
@@ -101,75 +118,128 @@ namespace WordLaTeX
             IsLegacy = meta.IsLegacy,
         };
 
-        /// <summary>
-        /// "&lt;document&gt;|id:&lt;guid&gt;" for v2 equations. Legacy equations have no id, so the key records
-        /// their position plus a hash of the LaTeX, and the lookup verifies the hash — text edited in the
-        /// meantime can move the equation, but can never make us replace a different one.
-        /// </summary>
-        private static string KeyOf(Word.InlineShape shape, EquationMetadata meta)
+        private bool CanHandleEquationEnter()
         {
-            string doc = shape.Range.Document.FullName;
-            return !string.IsNullOrEmpty(meta.Id)
-                ? doc + "|id:" + meta.Id
-                : doc + "|at:" + shape.Range.Start + ":" + Hash(meta.Latex);
+            try { return NativeFocus.IsDocumentFocused("_WwG") && EquationParagraphInsertionRange() != null; }
+            catch (COMException) { return false; }
         }
 
-        private static string KeyOf(Word.Shape shape, EquationMetadata meta)
+        private Word.Range EquationParagraphInsertionRange()
         {
-            string doc = shape.Anchor.Document.FullName;
-            return !string.IsNullOrEmpty(meta.Id)
-                ? doc + "|id:" + meta.Id
-                : doc + "|float:" + shape.Name + ":" + Hash(meta.Latex);
+            if (_app.Documents.Count == 0) return null;
+            var sel = _app.Selection;
+            Word.Range after;
+            if (GetSelection().Equation != null)
+            {
+                if (sel.Type == Word.WdSelectionType.wdSelectionInlineShape)
+                    after = sel.InlineShapes[1].Range.Duplicate;
+                else
+                    after = sel.ShapeRange[1].Anchor.Paragraphs[1].Range.Duplicate;
+            }
+            else
+            {
+                // The common typing case: a caret immediately AFTER a picture, not a selected picture.
+                // Use the selection's story (also works inside table cells and headers), not doc.Range.
+                var caret = sel.Range;
+                if (caret.Start != caret.End || caret.Start == 0) return null;
+                var previous = caret.Duplicate;
+                previous.SetRange(caret.Start - 1, caret.Start);
+                if (previous.InlineShapes.Count != 1) return null;
+                var picture = previous.InlineShapes[1];
+                if (picture.Range.End != caret.Start ||
+                    EquationMetadata.FromWord(SafeString(() => picture.AlternativeText), SafeString(() => picture.Title)) == null)
+                    return null;
+                after = caret.Duplicate;
+            }
+            after.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+            return after;
+        }
+
+        /// <summary>
+        /// Enter on or immediately after an equation inserts a paragraph outside the picture's range.
+        /// Clear the insertion-point baseline BEFORE inserting, so the new paragraph cannot inherit it.
+        /// Only unmodified Enter in the Word document is routed here (not dialogs or the editor).
+        /// </summary>
+        internal bool InsertParagraphAfterSelectedEquation()
+        {
+            var after = EquationParagraphInsertionRange();
+            if (after == null) return false;
+            after.Select();
+            var sel = _app.Selection;
+            sel.Font.Position = 0;
+            // Assign only to the collapsed insertion range: never let Selection.TypeParagraph
+            // operate on Word's picture selection or its SVG character formatting.
+            after.Text = "\r";
+            after.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+            after.Select();
+            sel = _app.Selection;
+            sel.Font.Position = 0;
+            return true;
+        }
+
+        private void PlaceCaretAfterInline(Word.InlineShape picture)
+        {
+            var after = picture.Range.Duplicate;
+            after.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+            after.Select();
+            _app.Selection.Font.Position = 0;
+        }
+
+        /// <summary>
+        /// Session-local identity for a native Word picture. Copies (including identical legacy
+        /// equations) get separate keys; text movement and Save As do not change an object's key.
+        /// Word can return different COM wrappers for the same picture. Compare native ranges/IDs,
+        /// not managed reference identity; copied metadata is never an address.
+        /// </summary>
+        private string KeyOf(object shape)
+        {
+            foreach (var entry in _targets)
+            {
+                try
+                {
+                    if (entry.Value is Word.InlineShape inline && shape is Word.InlineShape candidate &&
+                        inline.Range.IsEqual(candidate.Range)) return entry.Key;
+                    if (entry.Value is Word.Shape floating && shape is Word.Shape floatCandidate &&
+                        floating.ID == floatCandidate.ID && floating.Anchor.IsEqual(floatCandidate.Anchor)) return entry.Key;
+                }
+                catch (COMException) { /* A previously tracked picture was deleted. */ }
+                catch (InvalidComObjectException) { }
+            }
+            string key = "word|object:" + Guid.NewGuid().ToString("N");
+            _targets.Add(key, shape);
+            return key;
+        }
+
+        private void Retarget(string key, object newShape)
+        {
+            // Replacement creates a new picture, but pending edits still address the same equation.
+            _targets[key] = newShape;
         }
 
         private object FindByKey(string key)
         {
-            int bar = key?.LastIndexOf('|') ?? -1;
-            if (bar < 0) return null;
-            string docName = key.Substring(0, bar);
-            string locator = key.Substring(bar + 1);
-
-            Word.Document doc = null;
-            foreach (Word.Document d in _app.Documents)
-                if (string.Equals(d.FullName, docName, StringComparison.OrdinalIgnoreCase)) { doc = d; break; }
-            if (doc == null) return null;
-
-            if (locator.StartsWith("id:", StringComparison.Ordinal))
+            if (string.IsNullOrEmpty(key) || !_targets.TryGetValue(key, out object target)) return null;
+            try
             {
-                string id = locator.Substring(3);
-                foreach (Word.InlineShape s in doc.InlineShapes)
-                    if (EquationMetadata.FromWord(SafeString(() => s.AlternativeText), SafeString(() => s.Title))?.Id == id) return s;
-                foreach (Word.Shape s in doc.Shapes)
-                    if (EquationMetadata.FromWord(SafeString(() => s.AlternativeText), SafeString(() => s.Title))?.Id == id) return s;
-                return null;
-            }
-
-            string[] parts = locator.Split(':');
-            if (parts.Length < 3) return null;
-            string hash = parts[parts.Length - 1];
-            if (parts[0] == "at" && int.TryParse(parts[1], out int start))
-            {
-                var candidate = MatchLegacy(doc.Range(start, start + 1).InlineShapes, hash);
-                return candidate ?? MatchLegacy(doc.InlineShapes, hash); // moved: first equation with the same LaTeX
-            }
-            if (parts[0] == "float")
-            {
-                foreach (Word.Shape s in doc.Shapes)
+                if (target is Word.InlineShape inline)
                 {
-                    var m = EquationMetadata.FromWord(SafeString(() => s.AlternativeText), SafeString(() => s.Title));
-                    if (m != null && Hash(m.Latex) == hash) return s;
+                    var range = inline.Range;
+                    // A deleted picture must not resolve to a neighbour at its former position.
+                    if (range.End - range.Start == 1 && range.InlineShapes.Count == 1 &&
+                        EquationMetadata.FromWord(SafeString(() => inline.AlternativeText), SafeString(() => inline.Title)) != null)
+                        return inline;
+                }
+                else if (target is Word.Shape floating)
+                {
+                    // Access Anchor to verify the native picture/document is still alive.
+                    var anchor = floating.Anchor;
+                    if (anchor != null && EquationMetadata.FromWord(SafeString(() => floating.AlternativeText), SafeString(() => floating.Title)) != null)
+                        return floating;
                 }
             }
-            return null;
-        }
-
-        private static Word.InlineShape MatchLegacy(Word.InlineShapes shapes, string hash)
-        {
-            foreach (Word.InlineShape s in shapes)
-            {
-                var m = EquationMetadata.FromWord(SafeString(() => s.AlternativeText), SafeString(() => s.Title));
-                if (m != null && Hash(m.Latex) == hash) return s;
-            }
+            catch (COMException) { /* The picture was deleted or its document was closed. */ }
+            catch (InvalidComObjectException) { /* Word disconnected the COM object. */ }
+            _targets.Remove(key);
             return null;
         }
 
@@ -181,8 +251,8 @@ namespace WordLaTeX
             var sel = _app.Selection;
 
             object target = string.IsNullOrEmpty(request.TargetKey) ? null : FindByKey(request.TargetKey);
-            string notice = !string.IsNullOrEmpty(request.TargetKey) && target == null
-                ? "원래 수식을 찾을 수 없어 커서 위치에 새 수식으로 삽입했습니다." : null;
+            if (!string.IsNullOrEmpty(request.TargetKey) && target == null)
+                throw new HostOperationException("수정할 수식을 찾을 수 없습니다. 문서에서 수식을 다시 선택한 뒤 수정해 주세요.");
 
             string svgPath = Path.Combine(Path.GetTempPath(), "texture_" + Guid.NewGuid().ToString("N") + ".svg");
             File.WriteAllText(svgPath, request.Svg, new UTF8Encoding(false));
@@ -209,7 +279,7 @@ namespace WordLaTeX
 
                 EquationInfo info;
                 if (target is Word.InlineShape inline) info = ReplaceInline(inline, svgPath, request, meta);
-                else if (target is Word.Shape floating) info = ReplaceFloating(floating, svgPath, meta);
+                else if (target is Word.Shape floating) info = ReplaceFloating(floating, svgPath, meta, request.TargetKey);
                 else
                 {
                     // A new equation must never overwrite what is selected: AddPicture at a selected inline
@@ -227,7 +297,7 @@ namespace WordLaTeX
                     info = InsertNew(sel, svgPath, request, meta);
                 }
 
-                return new InsertResult { Equation = info, Notice = notice };
+                return new InsertResult { Equation = info };
             }
             finally
             {
@@ -237,19 +307,31 @@ namespace WordLaTeX
         }
 
         /// <summary>
-        /// Replaces the picture in place: AddPicture on the old picture's range swaps it in one step, so the
-        /// surrounding tab stops and equation number (display equations) are untouched and nothing is lost
-        /// if insertion fails.
+        /// Insert before the old picture, then explicitly delete the old one after metadata succeeds.
+        /// Word can insert an SVG beside a picture even when AddPicture receives its noncollapsed range.
+        /// Do not rely on AddPicture replacing that range (the old implementation left duplicate pictures).
         /// </summary>
         private EquationInfo ReplaceInline(Word.InlineShape old, string svgPath, InsertRequest request, EquationMetadata meta)
         {
-            Word.Range range = old.Range;
+            Word.Range range = old.Range.Duplicate;
+            range.Collapse(Word.WdCollapseDirection.wdCollapseStart);
             var pic = range.Document.InlineShapes.AddPicture(svgPath, false, true, range);
-            FinishInline(pic, request, meta);
-            return Describe(KeyOf(pic, meta), meta, pic.Width);
+            try
+            {
+                FinishInline(pic, request, meta);
+                old.Delete();
+            }
+            catch
+            {
+                try { pic.Delete(); } catch (COMException) { }
+                throw;
+            }
+            Retarget(request.TargetKey, pic);
+            PlaceCaretAfterInline(pic);
+            return Describe(KeyOf(pic), meta, pic.Width);
         }
 
-        private EquationInfo ReplaceFloating(Word.Shape old, string svgPath, EquationMetadata meta)
+        private EquationInfo ReplaceFloating(Word.Shape old, string svgPath, EquationMetadata meta, string targetKey)
         {
             var doc = old.Anchor.Document;
             var pic = doc.Shapes.AddPicture(svgPath, false, true, old.Left, old.Top, Type.Missing, Type.Missing, old.Anchor);
@@ -267,7 +349,8 @@ namespace WordLaTeX
             pic.AlternativeText = EquationMetadata.AltTextFor(meta.Latex);
             pic.Title = meta.ToWordTitle();
             old.Delete();
-            return Describe(KeyOf(pic, meta), meta, pic.Width);
+            Retarget(targetKey, pic);
+            return Describe(KeyOf(pic), meta, pic.Width);
         }
 
         /// <summary>New equation at the cursor (v1.2 behaviour: display equations on empty lines, inline otherwise).</summary>
@@ -310,7 +393,7 @@ namespace WordLaTeX
                     _app.ScreenUpdating = true;
                     _app.ScreenRefresh();
                 }
-                return Describe(KeyOf(pic, meta), meta, pic.Width);
+                return Describe(KeyOf(pic), meta, pic.Width);
             }
 
             float originalSize = sel.Font.Size;
@@ -335,14 +418,15 @@ namespace WordLaTeX
             sel.ParagraphFormat.BaseLineAlignment = Word.WdBaselineAlignment.wdBaselineAlignBaseline;
             pic = sel.InlineShapes.AddPicture(svgPath, false, true);
             FinishInline(pic, request, meta);
-            sel.Collapse(Word.WdCollapseDirection.wdCollapseEnd);
+            PlaceCaretAfterInline(pic);
+            sel = _app.Selection;
 
             // Text typed after the equation must not inherit the raised baseline.
             sel.Font.ColorIndex = Word.WdColorIndex.wdAuto;
             sel.Font.Color = Word.WdColor.wdColorAutomatic;
             if (originalSize > 0 && originalSize < 1000) sel.Font.Size = originalSize;
             sel.Font.Position = 0;
-            return Describe(KeyOf(pic, meta), meta, pic.Width);
+            return Describe(KeyOf(pic), meta, pic.Width);
         }
 
         private static void FinishInline(Word.InlineShape pic, InsertRequest request, EquationMetadata meta)
@@ -420,18 +504,10 @@ namespace WordLaTeX
             try { return get(); } catch (COMException) { return null; }
         }
 
-        private static string Hash(string text)
-        {
-            unchecked
-            {
-                uint h = 2166136261;
-                foreach (char c in text ?? "") { h ^= c; h *= 16777619; }
-                return h.ToString("x8");
-            }
-        }
-
         public void Dispose()
         {
+            _enterHook.Dispose();
+            _targets.Clear();
             _app.WindowSelectionChange -= OnWindowSelectionChange;
             _app.WindowActivate -= OnWindowActivate;
             _app.DocumentChange -= OnDocumentChange;

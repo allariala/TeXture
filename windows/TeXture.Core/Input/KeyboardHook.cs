@@ -23,6 +23,9 @@ namespace TeXture.Core.Input
         private IntPtr _hook;
         private int _swallowKeyUp;
 
+        /// <summary>Optional UI-thread scope check; false lets the original key reach Office normally.</summary>
+        public Func<HotkeyGesture, bool> CanExecute { get; set; }
+
         public KeyboardHook()
         {
             _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
@@ -32,11 +35,12 @@ namespace TeXture.Core.Input
                 Log.Error("SetWindowsHookEx failed: " + System.Runtime.InteropServices.Marshal.GetLastWin32Error());
         }
 
-        public void SetBindings(IEnumerable<KeyValuePair<HotkeyGesture, Action>> bindings)
+        public void SetBindings(IEnumerable<KeyValuePair<HotkeyGesture, Action>> bindings, bool allowUnmodifiedKeys = false)
         {
             _bindings.Clear();
             foreach (var kv in bindings)
-                if (kv.Key.IsValid) _bindings[kv.Key] = kv.Value;
+                if (kv.Key.IsValid || (allowUnmodifiedKeys && CanExecute != null && kv.Key.Key != Keys.None))
+                    _bindings[kv.Key] = kv.Value;
         }
 
         private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -56,7 +60,7 @@ namespace TeXture.Core.Input
                 {
                     var gesture = new HotkeyGesture((Keys)vk,
                         Win32.IsKeyDown(Win32.VK_CONTROL), Win32.IsKeyDown(Win32.VK_MENU), Win32.IsKeyDown(Win32.VK_SHIFT));
-                    if (_bindings.TryGetValue(gesture, out var action))
+                    if (_bindings.TryGetValue(gesture, out var action) && IsInScope(gesture))
                     {
                         _swallowKeyUp = vk;
                         // Run after the hook returns: hooks must be fast and must not pump messages.
@@ -72,6 +76,12 @@ namespace TeXture.Core.Input
             vk == Win32.VK_SHIFT || vk == Win32.VK_CONTROL || vk == Win32.VK_MENU ||
             vk == Win32.VK_LWIN || vk == Win32.VK_RWIN ||
             (vk >= 0xA0 && vk <= 0xA5); // L/R shift, ctrl, alt
+
+        private bool IsInScope(HotkeyGesture gesture)
+        {
+            try { return CanExecute == null || CanExecute(gesture); }
+            catch (Exception ex) { Log.Warn("Checking keyboard shortcut scope", ex); return false; }
+        }
 
         private static void Run(Action action)
         {

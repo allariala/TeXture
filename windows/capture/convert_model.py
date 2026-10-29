@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """One-time conversion of the maintainer's trusted legacy model (never run on user input).
 
 Run with the original texify/transformers build environment. The distributed engine only loads

@@ -23,7 +23,7 @@
     <PublishUrl>publish\</PublishUrl>
     <InstallUrl />
     <TargetCulture>ko</TargetCulture>
-    <ApplicationVersion>2.1.0.0</ApplicationVersion>
+    <ApplicationVersion>2.1.1.0</ApplicationVersion>
     <AutoIncrementApplicationRevision>false</AutoIncrementApplicationRevision>
     <UpdateEnabled>false</UpdateEnabled>
     <UpdateInterval>0</UpdateInterval>
@@ -151,23 +151,29 @@
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <!-- F5 must run MSBuild registration even when the DLL is already up to date. -->
+    <DisableFastUpToDateCheck Condition="'$(Configuration)' == 'Debug'">true</DisableFastUpToDateCheck>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
   </PropertyGroup>
   <PropertyGroup>
     <SignManifests>true</SignManifests>
-    <ManifestCertificateThumbprint>A771EBA290FF4E40C921176619566C3A81235751</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>CAC57326ADFB8818B2115B03F78830B956692CC7</ManifestCertificateThumbprint>
     <ApplicationIcon>TeXture_Word.ico</ApplicationIcon>
   </PropertyGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(VSToolsPath)\OfficeTools\Microsoft.VisualStudio.Tools.Office.targets" Condition="'$(VSToolsPath)' != ''" />
   <!--
-    VSTO builds register the add-in in HKCU so F5 debugging works. Command-line builds must not do that:
-    the key name equals the installed add-in's, so a build would silently re-point the user's installed
-    TeXture at bin\Debug. Registration now happens only inside Visual Studio (or with RegisterAddinOnBuild=true).
+    Every Debug build registers the development add-in, including F5 builds. Release command-line
+    builds do not change the installed add-in unless RegisterAddinOnBuild=true is explicitly set.
   -->
-  <Target Name="RegisterOfficeAddin" Condition="'$(VSTO_ProjectType)' == 'Application' And ('$(BuildingInsideVisualStudio)' == 'true' Or '$(RegisterAddinOnBuild)' == 'true')">
+  <Target Name="RegisterOfficeAddin" AfterTargets="Build" Condition="'$(VSTO_ProjectType)' == 'Application' And ('$(Configuration)' == 'Debug' Or '$(BuildingInsideVisualStudio)' == 'true' Or '$(RegisterAddinOnBuild)' == 'true')">
     <SetOffice2007AddInRegistration Url="$(AbsolutePathToTheDeploymentManifest)" AddInName="$(TargetName)" OfficeApplication="$(OfficeApplication)" FriendlyName="$(FriendlyName)" Description="$(OfficeApplicationDescription)" LoadBehavior="$(LoadBehavior)" />
   </Target>
+  <!-- Debug Clean/Rebuild keeps registration so a clean or interrupted build cannot remove it.
+       Release command-line Clean also leaves the user's installed add-in registered. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug' Or ('$(BuildingInsideVisualStudio)' != 'true' And '$(RegisterAddinOnBuild)' != 'true')">
+    <VSTOCleanDependsOn />
+  </PropertyGroup>
   <!-- The shared editor UI is copied next to the add-in for development builds (the installer ships one copy in {app}\ui). -->
   <Target Name="CopySharedUi" AfterTargets="Build">
     <ItemGroup>

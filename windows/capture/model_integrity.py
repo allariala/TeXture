@@ -1,1 +1,2 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 MODEL_SHA256 = 'd4624bf94ad05e57a979e9747a1cdd033e0531cb4a19923113f877204b55bc99'

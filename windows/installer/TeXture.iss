@@ -8,7 +8,7 @@
 ;  - Never kills PowerPoint/Word: asks the user to close them.
 ;  - Real uninstaller (Apps & features), removes registry entries and files.
 
-#define AppVersion "2.1.0"
+#define AppVersion "2.1.1"
 #define Root "..\.."
 #define Assets "assets"
 #define PptBin "..\PowerPoint\bin\Release"
@@ -60,6 +60,10 @@ Source: "{#Assets}\TeXture_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Assets}\TeXture-signing.cer"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Root}\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#Root}\windows\capture\MODEL_NOTICE.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Root}\SOURCE_AVAILABILITY.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Root}\REBUILDING.md"; DestDir: "{app}"; Flags: ignoreversion
 ; PowerPoint add-in (assembly, VSTO manifests, WebView2, shared UI)
 Source: "{#PptBin}\*.dll"; DestDir: "{app}\PowerPoint"; Flags: ignoreversion
 Source: "{#PptBin}\*.manifest"; DestDir: "{app}\PowerPoint"; Flags: ignoreversion
@@ -77,6 +81,8 @@ Source: "{#WordBin}\ui\*"; DestDir: "{app}\Word\ui"; Flags: ignoreversion recurs
 Source: "{#Capture}\dist\texture_capture\*"; DestDir: "{app}\capture_server"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#Capture}\texify_weights.pt"; DestDir: "{app}\capture_server"; Flags: ignoreversion
 Source: "{#Capture}\models\*.json"; DestDir: "{app}\capture_server\models"; Flags: ignoreversion
+Source: "{#Capture}\LICENSE"; DestDir: "{app}\capture_server"; Flags: ignoreversion
+Source: "{#Capture}\MODEL_NOTICE.md"; DestDir: "{app}\capture_server"; Flags: ignoreversion
 
 [Registry]
 ; Install location (the add-ins use it to find the OCR engine).

@@ -1,0 +1,19 @@
+Microsoft runtime components
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+Microsoft.Office.Tools.Common.v4.0.Utilities.dll is redistributed unmodified
+as a permitted Visual Studio/VSTO runtime component. It is not relicensed
+under TeXture's MIT license or the OCR program's GPL license.
+
+Redistribution list (Office development tools):
+https://learn.microsoft.com/en-us/visualstudio/releases/2022/redistribution
+Runtime assembly information:
+https://learn.microsoft.com/en-us/visualstudio/vsto/assemblies-in-the-visual-studio-tools-for-office-runtime
+
+The Microsoft C/C++ runtime DLLs accompanying the Python program are runtime
+redistributables. See licenses/ocr/CPython-3.13.9/crtlicense.txt for the
+Python Windows build's runtime redistribution notice.
+
+Microsoft Office, the installed VSTO Runtime, .NET Framework and the WebView2
+Runtime remain separate prerequisites under their own Microsoft terms.
+WebView2 SDK files have their separate included WebView2-SDK-LICENSE.txt.

@@ -27,7 +27,7 @@ executable, builds signed VSTO manifests and signs the installer/uninstaller:
 pwsh windows/installer/build.ps1
 ```
 
-It requires Visual Studio Office build tools, Inno Setup 6, the Windows SDK signing tool and the
+It requires Visual Studio Office build tools, Inno Setup 7 (or compatible 6), the Windows SDK signing tool and the
 private signing key in the maintainer's Windows certificate store. The key is never distributed.
 The self-signed public certificate is shipped for inspecting signatures; no global trust is installed.
 
@@ -36,3 +36,15 @@ and verify the packaged engine's authenticated PNG input and equation recognitio
 virtual environment is not bundled into the release. For GPL compliance distribute the engine's
 corresponding source and exact dependency source/version information with the release; the TeXture
 repository alone does not include the source of every third-party library.
+
+For a distributable release, use the PowerShell 7 wrapper instead:
+
+```powershell
+pwsh windows/installer/package-release.ps1
+```
+
+This collects versioned dependency sources and notices, builds the signed installer,
+then creates its matching `TeXture_Source_v<version>.zip` and `SHA256SUMS_v<version>.txt`.
+`-SkipOcrBuild` reuses the existing engine only when OCR sources/model are unchanged.
+Upload both binary and source assets; see `RELEASE_UPLOAD.md`. The model derivative
+is CC BY-SA 4.0 as described in `MODEL_NOTICE.md`, not GPL or the application's MIT license.

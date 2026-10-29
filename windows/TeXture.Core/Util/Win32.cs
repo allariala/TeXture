@@ -38,6 +38,9 @@ namespace TeXture.Core.Util
         public static extern IntPtr SetFocus(IntPtr hWnd);
 
         [DllImport("user32.dll")]
+        public static extern IntPtr GetFocus();
+
+        [DllImport("user32.dll")]
         public static extern bool IsWindow(IntPtr hWnd);
 
         [DllImport("user32.dll")]
@@ -92,6 +95,10 @@ namespace TeXture.Core.Util
     /// <summary>Moves Win32 keyboard focus into an Office document window (used by the host adapters).</summary>
     public static class NativeFocus
     {
+        /// <summary>Checks the actual focused control on this Office UI thread (excludes dialogs/ribbon).</summary>
+        public static bool IsDocumentFocused(string documentClass) =>
+            string.Equals(Win32.ClassNameOf(Win32.GetFocus()), documentClass, StringComparison.Ordinal);
+
         /// <summary>
         /// Activates <paramref name="frame"/> and gives keyboard focus to its first visible descendant of
         /// <paramref name="documentClass"/> (PowerPoint: "mdiClass", Word: "_WwG"), falling back to the frame.

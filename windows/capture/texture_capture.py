@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """TeXture offline OCR engine (API v3): screenshot of an equation -> LaTeX, using texify on the CPU.
 
 Started by the TeXture add-in:  texture_capture.exe --port <port>

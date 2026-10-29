@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Small, dependency-light boundary for the offline OCR service."""
 import hmac
 import io

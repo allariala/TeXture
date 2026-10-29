@@ -18,6 +18,7 @@ namespace WordLaTeX
             {
                 _adapter = new WordAdapter(Application);
                 Runtime = new TeXtureRuntime(_adapter, CustomTaskPanes, LoadIcon(), "TeXture");
+                Log.Info("Word add-in assembly: " + typeof(ThisAddIn).Assembly.Location);
             }
             catch (Exception ex)
             {

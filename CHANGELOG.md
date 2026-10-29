@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.1 (Windows)
+
+- Word: editing a pasted equation updates that copy without changing the original or leaving an extra picture.
+- Word: identify pictures by native ranges/shape IDs instead of copied metadata or managed COM-wrapper references.
+- Word: preserve equations when pressing Enter immediately after them, clear inherited baseline offsets, and place the caret after updated equations.
+- Keep the existing table baseline workaround and the Program Files deployment without adding root/publisher trust certificates.
+- Update the release build for Inno Setup 7 and keep development add-in registration intact during packaging.
+
 ## 2.1.0 (Windows)
 
 - Preserve the 2.0.1 editor features while hardening offline OCR and deployment.
