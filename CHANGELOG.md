@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.2.0 (Windows)
+
+- Add a lowercase `hwp` button immediately left of the four-square palette icon.
+- Convert LaTeX to editable Hancom equation script and copy Unicode text only, preserving existing Office insertion paths.
+- Parse nested fractions, roots, scripts, styles, matrices, cases, alignment environments and documented symbols without additional dependencies.
+- Use `root {n} of {...}` for indexed roots, preserve fraction grouping, explicitly restore nested italic/roman font scopes, and keep consecutive function names upright.
+- Convert positive math spacing without warnings (`quad`/`qquad` → four/eight HWP quarter-spaces).
+- Report unsupported syntax with source positions; require acknowledgement of approximations before copying.
+- Invalidate the WebView2 UI cache by content as well as version so same-version reinstalls load current files.
+- Include 30 regression tests covering the three-line aerodynamic equation, representative equations, font scope, spacing and clipboard safeguards.
+- Consolidate HWP usage, support limits and Hancom attribution in README and include it in the installer; remove the separate docs directory.
+
 ## 2.1.1 (Windows)
 
 - Word: editing a pasted equation updates that copy without changing the original or leaving an extra picture.

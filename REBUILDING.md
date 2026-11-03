@@ -1,6 +1,6 @@
-# Rebuilding the 2.1.1 Windows release
+# Rebuilding the 2.2.0 Windows release
 
-The companion `TeXture_Source_v2.1.1.zip` contains the TeXture source snapshot,
+The companion `TeXture_Source_v2.2.0.zip` contains the TeXture source snapshot,
 exact-version upstream source archives under `third-party-sources/`, model weights
 and configuration, licenses, and `SOURCE_INDEX.json` (archive URLs, versions,
 revisions and SHA256). `SOURCE_FILES.sha256` inventories the source snapshot.

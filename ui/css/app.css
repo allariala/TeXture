@@ -175,6 +175,8 @@ kbd {
   transition: background .15s, color .15s;
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.hwp-btn { font: 600 11px var(--ui); width: 30px; }
+.hwp-btn:disabled { opacity: .5; cursor: wait; }
 .icon-btn.active { background: var(--accent-weak); color: var(--accent); }
 .icon-btn.small { width: 22px; height: 100%; border-radius: 0; font-size: 15px; font-weight: 600; }
 .icon-btn:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

@@ -5,6 +5,11 @@ It uses or redistributes the following third-party components. Full license text
 
 ## Shipped with the add-ins
 
+The HWP converter references Hancom's public equation format and official command help (links and limits in [README.md](README.md#한글-2024-수식-복사-220)).
+No Hancom binaries or manual copies are redistributed.
+
+본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.
+
 | Component | Version | License | Where |
 |---|---|---|---|
 | [MathJax](https://www.mathjax.org/) (`tex-svg-full.js`) | 3.2.2 | Apache License 2.0 — [`licenses/Apache-2.0.txt`](licenses/Apache-2.0.txt) | `ui/vendor/mathjax/` |

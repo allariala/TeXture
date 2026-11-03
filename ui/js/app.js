@@ -14,6 +14,7 @@ import { cloneDefaults, findSnippet } from './snippets.js';
 import { Keymap, ChordController, comboFromEvent, parseHotkey } from './keymap.js';
 import { Autocomplete } from './autocomplete.js';
 import { Palette } from './palette.js';
+import { copyHwp } from './hwp-copy.js';
 import { SettingsPanel } from './settings.js';
 import { t, setLanguage, applyDom, defaultLanguage } from './i18n.js';
 
@@ -32,7 +33,7 @@ const ui = {
   editor: $('editor'),
   modeChip: $('modeChip'), modeLabel: $('modeLabel'), unsaved: $('unsavedDot'),
   fontSize: $('fontSize'), sizeUp: $('sizeUp'), sizeDown: $('sizeDown'), colors: $('colors'),
-  btnPalette: $('btnPalette'), btnCapture: $('btnCapture'), btnSettings: $('btnSettings'),
+  btnHwp: $('btnHwp'), btnPalette: $('btnPalette'), btnCapture: $('btnCapture'), btnSettings: $('btnSettings'),
   preview: $('preview'), previewEmpty: $('previewEmpty'), previewPane: $('previewPane'), errorPill: $('errorPill'),
   resizer: $('resizer'),
   btnInsert: $('btnInsert'), insertLabel: $('insertLabel'), btnNew: $('btnNew'), btnRevert: $('btnRevert'), btnClear: $('btnClear'),
@@ -574,6 +575,33 @@ ui.editor.addEventListener('click', () => { ac.hide(); if (chords) chords.close(
 ui.editor.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== ui.editor) ac.hide(); }, 120));
 
 // ================================================================== UI wiring
+let hwpClipboardRequest = null;
+function writeHwpText(text) {
+  if (!isHosted) return navigator.clipboard.writeText(text);
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      hwpClipboardRequest = null;
+      reject(new Error('Clipboard response timed out'));
+    }, 5000);
+    hwpClipboardRequest = { resolve, reject, timer };
+    send({ type: 'hwp.copy', text });
+  });
+}
+ui.btnHwp.addEventListener('click', async () => {
+  ui.btnHwp.disabled = true;
+  try {
+    const result = await copyHwp(editor.value, {
+      writeText: writeHwpText,
+      confirmApproximation: warnings => window.confirm(t('hwp.confirm', { warnings: warnings.join('\n') })),
+    });
+    if (result.errors.length) toast(t('hwp.failed', { msg: result.errors[0].message }), true);
+    else if (result.copied) toast(t(result.warnings.length ? 'hwp.copiedApproximate' : 'hwp.copied'));
+  } catch (err) {
+    toast(t('hwp.failed', { msg: err.message }), true);
+  } finally {
+    ui.btnHwp.disabled = false;
+  }
+});
 ui.btnInsert.addEventListener('click', insert);
 ui.btnNew.addEventListener('click', insertAsNew);
 ui.btnRevert.addEventListener('click', revert);
@@ -736,6 +764,16 @@ onMessage((msg) => {
       state.officeDark = !!msg.dark;
       applyTheme();
       break;
+    case 'hwp.copied': {
+      const pending = hwpClipboardRequest;
+      if (pending) {
+        hwpClipboardRequest = null;
+        clearTimeout(pending.timer);
+        if (msg.success) pending.resolve();
+        else pending.reject(new Error(msg.message || 'Clipboard unavailable'));
+      }
+      break;
+    }
     case 'notice':
       toast(t(msg.key));
       break;

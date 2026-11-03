@@ -8,7 +8,7 @@
 ;  - Never kills PowerPoint/Word: asks the user to close them.
 ;  - Real uninstaller (Apps & features), removes registry entries and files.
 
-#define AppVersion "2.1.1"
+#define AppVersion "2.2.0"
 #define Root "..\.."
 #define Assets "assets"
 #define PptBin "..\PowerPoint\bin\Release"
@@ -53,6 +53,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [InstallDelete]
 ; Leftovers of the v1.2.x layout (the OCR engine folder is replaced as a whole).
 Type: filesandordirs; Name: "{app}\capture_server"
+; Retired separate HWP help files; user-facing help now lives in README.md.
+Type: files; Name: "{app}\docs\HWP.md"
+Type: files; Name: "{app}\docs\HWP_EXAMPLES.md"
+Type: dirifempty; Name: "{app}\docs"
 
 [Files]
 Source: "{#Assets}\TeXture_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -64,6 +68,7 @@ Source: "{#Root}\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion re
 Source: "{#Root}\windows\capture\MODEL_NOTICE.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\SOURCE_AVAILABILITY.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Root}\REBUILDING.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#Root}\README.md"; DestDir: "{app}"; Flags: ignoreversion
 ; PowerPoint add-in (assembly, VSTO manifests, WebView2, shared UI)
 Source: "{#PptBin}\*.dll"; DestDir: "{app}\PowerPoint"; Flags: ignoreversion
 Source: "{#PptBin}\*.manifest"; DestDir: "{app}\PowerPoint"; Flags: ignoreversion

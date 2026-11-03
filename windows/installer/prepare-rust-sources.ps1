@@ -45,7 +45,7 @@ $results = @($jobs.Values | ForEach-Object -Parallel {
             $downloaded = $false
             for ($attempt = 0; $attempt -lt 3; $attempt++) {
                 try {
-                    Invoke-WebRequest -Uri $job.url -OutFile $partial -TimeoutSec 90 -Headers @{'User-Agent'='TeXture-release-source/2.1.1'}
+                    Invoke-WebRequest -Uri $job.url -OutFile $partial -TimeoutSec 90 -Headers @{'User-Agent'='TeXture-release-source/2.2.0'}
                     $downloaded = $true; break
                 } catch { if ($attempt -eq 2) { throw }; Start-Sleep -Seconds 1 }
             }

@@ -1,12 +1,12 @@
-# Corresponding source for TeXture 2.1.1
+# Corresponding source for TeXture 2.2.0
 
-The matching source asset is **`TeXture_Source_v2.1.1.zip`**, available alongside
+The matching source asset is **`TeXture_Source_v2.2.0.zip`**, available alongside
 the installer in this release:
 
-https://github.com/allariala/TeXture/releases/tag/v2.1.1
+https://github.com/allariala/TeXture/releases/tag/v2.2.0
 
 Direct source asset:
-https://github.com/allariala/TeXture/releases/download/v2.1.1/TeXture_Source_v2.1.1.zip
+https://github.com/allariala/TeXture/releases/download/v2.2.0/TeXture_Source_v2.2.0.zip
 
 The archive contains the release's project source, exact-version dependency
 source archives and Git submodule information, the distributed model/configuration,
@@ -22,6 +22,6 @@ preserve access to it as required by the applicable licenses.
 
 ## 한국어
 
-설치 파일과 같은 릴리스의 **`TeXture_Source_v2.1.1.zip`**에서 대응 소스를 받을 수 있습니다.
+설치 파일과 같은 릴리스의 **`TeXture_Source_v2.2.0.zip`**에서 대응 소스를 받을 수 있습니다.
 의존성 소스·모델·라이선스·재빌드 안내를 함께 제공하며, 별도 요청이나 개발자의 개인 서명 키는
 필요하지 않습니다. EXE를 재배포할 때도 해당 버전의 소스 제공 조건을 유지해 주세요.

@@ -14,7 +14,7 @@ New-Item -ItemType Directory -Force -Path $output,$archives,$licenseRoot | Out-N
 function Save-Download([string]$Url, [string]$Destination, [string]$ExpectedHash = '') {
     if ((Test-Path -LiteralPath $Destination) -and ((-not $ExpectedHash) -or (Get-FileHash -LiteralPath $Destination -Algorithm SHA256).Hash -eq $ExpectedHash)) { return }
     $partial = $Destination + '.partial'
-    Invoke-WebRequest -Uri $Url -OutFile $partial -TimeoutSec 120 -Headers @{'User-Agent'='TeXture-release-source/2.1.1'}
+    Invoke-WebRequest -Uri $Url -OutFile $partial -TimeoutSec 120 -Headers @{'User-Agent'='TeXture-release-source/2.2.0'}
     if ($ExpectedHash -and (Get-FileHash -LiteralPath $partial -Algorithm SHA256).Hash -ne $ExpectedHash) {
         throw "Source archive hash mismatch: $Destination"
     }

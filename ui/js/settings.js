@@ -4,6 +4,7 @@
 import { describeResult } from './snippets.js';
 import { prettyStroke } from './keymap.js';
 import { t, getLanguage } from './i18n.js';
+import { HANCOM_NOTICE } from './hwp.js';
 
 export class SettingsPanel {
   constructor({ sheet, backdrop, app }) {
@@ -57,6 +58,12 @@ export class SettingsPanel {
     if (this.tab === 'general') this.renderGeneral(body);
     else if (this.tab === 'snippets') this.renderSnippets(body);
     else this.renderShortcuts(body);
+    if (this.tab === 'general') {
+      const notice = document.createElement('p');
+      notice.className = 'hint';
+      notice.textContent = HANCOM_NOTICE;
+      body.appendChild(notice);
+    }
   }
 
   // ---------------------------------------------------------------- general

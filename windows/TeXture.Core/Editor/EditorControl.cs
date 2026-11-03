@@ -114,7 +114,8 @@ namespace TeXture.Core.Editor
 
         /// <summary>
         /// After an upgrade the WebView2 HTTP cache could serve old UI files next to new ones; clear it once
-        /// whenever the add-in version changes (settings/localStorage are not affected).
+        /// whenever the add-in version or UI content changes, including same-version fixes
+        /// (settings/localStorage are not affected).
         /// </summary>
         private static async System.Threading.Tasks.Task ClearCacheOnUpgradeAsync(CoreWebView2 core)
         {
@@ -123,7 +124,7 @@ namespace TeXture.Core.Editor
             try
             {
                 string marker = System.IO.Path.Combine(Paths.LocalDir, "ui.version");
-                string version = typeof(EditorControl).Assembly.GetName().Version.ToString();
+                string version = UiContentVersion();
                 string previous = System.IO.File.Exists(marker) ? System.IO.File.ReadAllText(marker).Trim() : "";
                 if (previous == version) return;
                 await core.Profile.ClearBrowsingDataAsync(CoreWebView2BrowsingDataKinds.DiskCache);
@@ -131,6 +132,26 @@ namespace TeXture.Core.Editor
                 Log.Info($"WebView2 cache cleared (UI {previous} → {version})");
             }
             catch (Exception ex) { Log.Warn("Could not clear the WebView2 cache", ex); }
+        }
+
+        private static string UiContentVersion()
+        {
+            var files = new List<string> { System.IO.Path.Combine(UiLocator.UiDirectory, "index.html") };
+            files.AddRange(System.IO.Directory.GetFiles(System.IO.Path.Combine(UiLocator.UiDirectory, "js"), "*.js"));
+            files.AddRange(System.IO.Directory.GetFiles(System.IO.Path.Combine(UiLocator.UiDirectory, "css"), "*.css"));
+            files.Sort(StringComparer.Ordinal);
+            using (var content = new System.IO.MemoryStream())
+            using (var hash = System.Security.Cryptography.SHA256.Create())
+            {
+                foreach (var file in files)
+                {
+                    var bytes = System.IO.File.ReadAllBytes(file);
+                    content.Write(bytes, 0, bytes.Length);
+                }
+                content.Position = 0;
+                return typeof(EditorControl).Assembly.GetName().Version + ":" +
+                    BitConverter.ToString(hash.ComputeHash(content)).Replace("-", "");
+            }
         }
 
         /// <summary>Set by the runtime before the page loads; also applied live when settings change.</summary>

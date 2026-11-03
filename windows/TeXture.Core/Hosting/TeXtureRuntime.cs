@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -296,6 +296,21 @@ namespace TeXture.Core.Hosting
                         break;
                     case "insert":
                         HandleInsert(editor, msg);
+                        break;
+                    case "hwp.copy":
+                        // Office's STA UI thread; Unicode text only, no Office insertion path.
+                        try
+                        {
+                            var text = msg.GetString("text");
+                            if (string.IsNullOrWhiteSpace(text) || text.Length > 2000000)
+                                throw new ArgumentException("복사할 수식이 없거나 너무 깁니다.");
+                            Clipboard.SetText(text, TextDataFormat.UnicodeText);
+                            editor.Post(new Dictionary<string, object> { ["type"] = "hwp.copied", ["success"] = true });
+                        }
+                        catch (Exception ex)
+                        {
+                            editor.Post(new Dictionary<string, object> { ["type"] = "hwp.copied", ["success"] = false, ["message"] = ex.Message });
+                        }
                         break;
                     case "escape":
                         _host.ReturnFocusToDocument(null);
