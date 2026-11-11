@@ -316,3 +316,23 @@ test('a native layout failure reaches the user with its stage and code before an
   await assert.rejects(createWordAdapter({ renderPng: async () => 'cG5n' })
     .insert({ ...message, numberingStyle: 0 }), /\[paragraph.layout\] GeneralException/);
 });
+
+test('unnumbered centered equations have a real neutral text boundary after the SVG, before the paragraph mark', () => {
+  const markup = buildWordOoxml(message, 'cG5n', 'id', { display: true, style: 0 });
+  const firstParagraph = markup.slice(markup.indexOf('<w:body>'), markup.indexOf('</w:p>'));
+  const drawingEnd = firstParagraph.indexOf('</w:drawing></w:r>');
+  const boundary = firstParagraph.slice(drawingEnd + '</w:drawing></w:r>'.length);
+  assert.equal(boundary, '<w:r><w:rPr><w:position w:val="0"/><w:vertAlign w:val="baseline"/></w:rPr><w:t xml:space="preserve">&#8203;</w:t></w:r>');
+  assert.ok(firstParagraph.includes('<w:jc w:val="center"/>'));
+  assert.ok(markup.includes(Buffer.from(svg).toString('base64')));
+  assert.ok(markup.includes('cx="228600" cy="152400"'));
+  assert.ok(!markup.includes('<w:fldSimple'));
+});
+
+test('the Enter text boundary is restricted to unnumbered display equations', () => {
+  for (const options of [{ display: false, style: 0 }, { display: true, style: 1 },
+    { display: true, style: 2 }, { display: true, style: 3 }]) {
+    const markup = buildWordOoxml(message, 'cG5n', 'id', options);
+    assert.ok(!markup.includes('&#8203;'));
+  }
+});

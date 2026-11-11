@@ -59,7 +59,7 @@ export async function createOfficeHost(dispatch) {
   if (requestedHost && requestedHost !== hostId) throw new Error('Please install the manifest for this Office application.');
   if (hostId === 'word' && !Office.context.requirements.isSetSupported('WordApi', '1.3'))
     throw new Error('TeXture requires WordApi 1.3 or later. Please update Word.');
-  const word = hostId === 'word' ? (await import('./office-word.js?v=2.0.4')).createWordAdapter() : null;
+  const word = hostId === 'word' ? (await import('./office-word.js?v=2.0.5')).createWordAdapter() : null;
   const canNumber = !!word && info.platform !== (Office.PlatformType?.OfficeOnline || 'OfficeOnline') &&
     Office.context.requirements.isSetSupported('WordApi', '1.5');
 
@@ -257,7 +257,7 @@ export async function createOfficeHost(dispatch) {
       switch (msg.type) {
         case 'ready':
           send({
-            type: 'init', host: hostId, surface: 'pane', version: '2.0.4',
+            type: 'init', host: hostId, surface: 'pane', version: '2.0.5',
             settings: deepMerge(defaults(), store.get('settings', {})),
             state: store.get('state.' + hostId, {}),
             snippets: store.get('snippets', null),

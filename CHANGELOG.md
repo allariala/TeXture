@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.5 (Mac Word web add-in; pending Mac verification)
+
+- Add a neutral zero-width text run after unnumbered centered SVG equations, separating the picture character from the paragraph-ending typing boundary.
+- Leave numbered equations, inline equations, SVG data and equation dimensions unchanged.
+
 ## 2.0.4 (Mac Word web add-in; pending Mac verification)
 
 - Fix editor focus recovery stealing focus from native numbering dropdowns and from the Word document.

@@ -7,7 +7,7 @@
 //                  (pending edits) and restored when that equation is selected again.
 // Selecting something else never throws text away; it only switches which text is shown.
 
-import { send, onMessage, isHosted } from './bridge.js?v=2.0.4';
+import { send, onMessage, isHosted } from './bridge.js?v=2.0.5';
 import { bindEditorFocus } from './focus-policy.js?v=2.0.4';
 import { renderPreview, exportSvg, toRenderable, SLOT } from './render.js';
 import { TexEditor } from './editor.js';

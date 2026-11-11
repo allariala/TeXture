@@ -100,6 +100,10 @@ export function buildWordOoxml(msg, pngBase64, id, { display = false, style = 0 
   const paragraphStart = display ? `<w:pPr><w:jc w:val="${numbered ? 'left' : 'center'}"/><w:textAlignment w:val="center"/></w:pPr>` +
     (numbered ? `<w:r>${neutralRun}<w:ptab w:alignment="center" w:relativeTo="margin" w:leader="none"/></w:r>` : '') : '';
   const number = numbered ? '<w:r><w:ptab w:alignment="right" w:relativeTo="margin" w:leader="none"/><w:t>(</w:t></w:r>' + numberingRuns(style) + '<w:r><w:t>)</w:t></w:r>' : '';
+  // Numbered equations end in ordinary text (the closing parenthesis). Unnumbered display
+  // equations otherwise end in the SVG character itself. Keep a real, zero-width text
+  // boundary with neutral formatting after that character so Enter cannot inherit its run.
+  const caretBoundary = display && !numbered ? `<w:r>${neutralRun}<w:t xml:space="preserve">&#8203;</w:t></w:r>` : '';
   // Match Windows FinishInline. Only the SVG character gets a baseline offset.
   const baseline = msg.svg.match(/vertical-align:\s*(-?[\d.]+)ex/i);
   const position = !display && baseline ? Math.round(Number(baseline[1]) * msg.fontSize * 0.430554) * 2 : 0;
@@ -110,7 +114,7 @@ export function buildWordOoxml(msg, pngBase64, id, { display = false, style = 0 
 <pkg:part pkg:name="/word/document.xml" pkg:contentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"><pkg:xmlData>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main"><w:body><w:p>${paragraphStart}<w:r>${pictureRun}<w:drawing>
 <wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="1" ${props}/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="0" ${props}/><pic:cNvPicPr><a:picLocks noChangeAspect="1"/></pic:cNvPicPr></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdPng"><a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip r:embed="rIdSvg"/></a:ext></a:extLst></a:blip><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline>
-</w:drawing></w:r>${number}</w:p>${nextParagraph}</w:body></w:document></pkg:xmlData></pkg:part>
+</w:drawing></w:r>${number}${caretBoundary}</w:p>${nextParagraph}</w:body></w:document></pkg:xmlData></pkg:part>
 <pkg:part pkg:name="/word/_rels/document.xml.rels" pkg:contentType="application/vnd.openxmlformats-package.relationships+xml"><pkg:xmlData><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdPng" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/equation.png"/><Relationship Id="rIdSvg" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/equation.svg"/></Relationships></pkg:xmlData></pkg:part>
 <pkg:part pkg:name="/word/media/equation.png" pkg:contentType="image/png" pkg:compression="store"><pkg:binaryData>${pngBase64}</pkg:binaryData></pkg:part>
 <pkg:part pkg:name="/word/media/equation.svg" pkg:contentType="image/svg+xml" pkg:compression="store"><pkg:binaryData>${utf8Base64(msg.svg)}</pkg:binaryData></pkg:part>
