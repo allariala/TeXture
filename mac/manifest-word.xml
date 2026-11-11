@@ -8,7 +8,7 @@
 -->
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
   <Id>4b565578-bc78-4c8f-bf44-c1458600bce0</Id>
-  <Version>2.0.5.0</Version>
+  <Version>2.0.6.0</Version>
   <ProviderName>Allariala</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="TeXture"/>
@@ -28,7 +28,7 @@
     </Sets>
   </Requirements>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://allariala.github.io/TeXture/ui/index.html?host=word&amp;platform=office&amp;v=2.0.5"/>
+    <SourceLocation DefaultValue="https://allariala.github.io/TeXture/ui/index.html?host=word&amp;platform=office&amp;v=2.0.6"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
@@ -73,7 +73,7 @@
         <bt:Image id="Icon.80x80" DefaultValue="https://allariala.github.io/TeXture/mac/assets/word-icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://allariala.github.io/TeXture/ui/index.html?host=word&amp;platform=office&amp;v=2.0.5"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://allariala.github.io/TeXture/ui/index.html?host=word&amp;platform=office&amp;v=2.0.6"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="Group.Label" DefaultValue="TeXture"/>

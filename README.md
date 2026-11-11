@@ -110,10 +110,10 @@ Numbering controls appear in the web editor on desktop Word with WordApi 1.5+, i
 PowerPoint still has no grouped-equation detection. The UI is served from
 `https://allariala.github.io/TeXture/ui/` (this repository on GitHub Pages).
 
-1. Download [`mac/manifest.xml`](mac/manifest.xml) (2.0 — **users of 1.x must replace their old manifest with this one**).
+1. Download [`mac/manifest-ppt.xml`](mac/manifest-ppt.xml) (2.0 — **users of 1.x must replace their old manifest with this one**).
 2. In Finder choose *Go → Go to Folder…* and open
    `~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef` (create the `wef` folder if it does not exist).
-3. Copy `manifest.xml` into that folder (replace the old file) and restart PowerPoint.
+3. Copy `manifest-ppt.xml` into that folder (replace the old file) and restart PowerPoint.
 4. *Home → TeXture*, or *Insert → Add-ins → My Add-ins* → **TeXture**.
 
 Publishing (maintainer): push this repository to `allariala/TeXture` and enable GitHub Pages for branch `main`,
@@ -139,7 +139,7 @@ See [Mac installation, limitations and manual checks](mac/README.md).
 **2.0.x / 2.1.x에서 업데이트:** 기존 버전을 제거하지 않고 2.2.0 설치 파일을 바로 실행하면 됩니다.
 `%APPDATA%\TeXture`의 사용자 설정은 유지됩니다. 이전 보안 업데이트와 Word 수정 사항도 포함됩니다.
 
-**Mac** — Windows와 같은 편집기입니다(화면 캡처·단축키 제외). 2.0의 `mac/manifest.xml`을
+**Mac** — Windows와 같은 편집기입니다(화면 캡처·단축키 제외). 2.0의 `mac/manifest-ppt.xml`을
 `~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef` 폴더에 복사(기존 파일 교체)하고 PowerPoint를
 다시 시작한 뒤 *홈 → TeXture* 또는 *삽입 → 추가 기능 → 내 추가 기능*에서 TeXture를 선택합니다.
 

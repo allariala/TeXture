@@ -97,13 +97,13 @@ export function buildWordOoxml(msg, pngBase64, id, { display = false, style = 0 
   // Positional tabs are resolved by Word against the actual margins. They do not depend on
   // section OOXML being available and cannot be intercepted by inherited ordinary tab stops.
   const numbered = display && style > 0;
-  const paragraphStart = display ? `<w:pPr><w:jc w:val="${numbered ? 'left' : 'center'}"/><w:textAlignment w:val="center"/></w:pPr>` +
-    (numbered ? `<w:r>${neutralRun}<w:ptab w:alignment="center" w:relativeTo="margin" w:leader="none"/></w:r>` : '') : '';
+  const paragraphStart = display ? '<w:pPr><w:jc w:val="left"/><w:textAlignment w:val="center"/></w:pPr>' +
+    `<w:r>${neutralRun}<w:ptab w:alignment="center" w:relativeTo="margin" w:leader="none"/></w:r>` : '';
   const number = numbered ? '<w:r><w:ptab w:alignment="right" w:relativeTo="margin" w:leader="none"/><w:t>(</w:t></w:r>' + numberingRuns(style) + '<w:r><w:t>)</w:t></w:r>' : '';
-  // Numbered equations end in ordinary text (the closing parenthesis). Unnumbered display
-  // equations otherwise end in the SVG character itself. Keep a real, zero-width text
-  // boundary with neutral formatting after that character so Enter cannot inherit its run.
-  const caretBoundary = display && !numbered ? `<w:r>${neutralRun}<w:t xml:space="preserve">&#8203;</w:t></w:r>` : '';
+  // Use the same margin-relative layout as numbered equations, without adding fields.
+  // A real trailing tab terminates the centered picture segment. The zero-width text
+  // used in 2.0.5 did not prevent Mac Word's Enter redraw/duplication problem.
+  const caretBoundary = display && !numbered ? `<w:r>${neutralRun}<w:ptab w:alignment="right" w:relativeTo="margin" w:leader="none"/></w:r>` : '';
   // Match Windows FinishInline. Only the SVG character gets a baseline offset.
   const baseline = msg.svg.match(/vertical-align:\s*(-?[\d.]+)ex/i);
   const position = !display && baseline ? Math.round(Number(baseline[1]) * msg.fontSize * 0.430554) * 2 : 0;
