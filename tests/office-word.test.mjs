@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../ui/js/office-word.js', import.meta.url), 'utf8');
-const { describeWordPicture, buildWordOoxml, svgDimensions, createWordAdapter } =
+const { describeWordPicture, buildWordOoxml, svgDimensions, createWordAdapter, numberingRuns,
+  numberingControlCodes, buildNumberingControlOoxml, isNumberingControl, wordTextWidth, tabStopsToClear } =
   await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="16px"><text>α</text></svg>';
 const message = { svg, latex: 'α & "x" < y', fontSize: 11, color: '#123456' };
@@ -39,12 +40,34 @@ test('dimensions accept points and reject invalid sizes before insertion', () =>
   assert.throws(() => svgDimensions('<svg width="bad" height="12">'));
 });
 
-function mockWord(selected, all, { failCaret = false } = {}) {
+const pageXml = '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:left="1440" w:right="1440"/></w:sectPr>';
+function mockWord(selected, all, { failCaret = false, atStart = false, inTable = false, initialFields = [], failUpdate = false,
+  selectionXml = pageXml } = {}) {
   const operations = [];
+  const fields = initialFields.map((field) => makeField(field.code || field, !!field.locked));
+  function makeField(code, locked = false) {
+    const field = { code, locked,
+      delete() { operations.push(['deleteField', code]); fields.splice(fields.indexOf(field), 1); },
+      updateResult() { if (failUpdate) throw new Error('field update unavailable'); operations.push(['updateField', code]); },
+    };
+    return field;
+  }
+  operations.fields = fields;
+  const fieldCollection = { get items() { return fields; }, load() {} };
   const range = (name) => ({
+    font: new Proxy({}, { set(target, key, value) { operations.push(['font', name, key, value]); target[key] = value; return true; } }),
     inlinePictures: { items: selected, load() {} },
+    paragraphs: { getFirst: () => ({ getRange: () => range('paragraphStart') }) },
+    compareLocationWith() { return { value: atStart ? 'Equal' : 'After' }; },
+    parentTableCellOrNullObject: { isNullObject: !inTable, load() {} },
+    getOoxml: () => ({ value: selectionXml }),
     getRange(location) { operations.push(['range', name, location]); return range(name + ':' + location); },
-    insertOoxml(xml, location) { operations.push(['insert', name, location, xml]); return range('inserted'); },
+    insertOoxml(xml, location) {
+      operations.push(['insert', name, location, xml]);
+      const added = [...xml.matchAll(/w:instr="([^"]*)"/g)].map((match) => makeField(match[1].trim()));
+      if (name === 'body:Start') fields.unshift(...added); else fields.push(...added);
+      return range('inserted');
+    },
     select() { if (failCaret) throw new Error('focus unavailable'); },
   });
   const wrap = (item, name) => ({ ...item, getRange(location = 'Whole') {
@@ -57,7 +80,10 @@ function mockWord(selected, all, { failCaret = false } = {}) {
   const selection = range('selection');
   selection.inlinePictures.items = wrappedSelected;
   const ctx = { sync: async () => {}, document: { getSelection: () => selection,
-    body: { inlinePictures: { items: wrappedAll, load() {} } } } };
+    body: { inlinePictures: { items: wrappedAll, load() {} }, fields: fieldCollection, getRange: (where) => range('body:' + where) },
+    sections: { items: [{ body: { getRange: () => ({ compareLocationWith: () => ({ value: 'Contains' }) }),
+      getOoxml: () => ({ value: pageXml }) } }], load() {} },
+  } };
   globalThis.Word = { run: async (callback) => callback(ctx) };
   return operations;
 }
@@ -145,4 +171,135 @@ test('wrong manifest and unsupported Word API reject instead of simulating succe
   await assert.rejects(createOfficeHost(() => {}), /manifest/);
   officeEnvironment('Word', 'word', false);
   await assert.rejects(createOfficeHost(() => {}), /WordApi 1.3/);
+});
+
+test('number formats use exactly the Windows counter names and switches', () => {
+  const codes = (style) => [...numberingRuns(style).matchAll(/w:instr=" ([^"]*) "/g)].map((m) => m[1]);
+  assert.deepEqual(codes(0), []);
+  assert.deepEqual(codes(1), ['SEQ EqGlobal \\* ARABIC']);
+  assert.deepEqual(codes(2), ['SEQ Chapter \\c', 'SEQ EqCh \\* ARABIC']);
+  assert.deepEqual(codes(3), ['SEQ Chapter \\c', 'SEQ Section \\c', 'SEQ EqSec \\* ARABIC']);
+  assert.deepEqual(numberingControlCodes('chapter'), ['SEQ Chapter \\n \\h', 'SEQ Section \\r 0 \\h', 'SEQ EqCh \\r 0 \\h', 'SEQ EqSec \\r 0 \\h']);
+  assert.deepEqual(numberingControlCodes('section'), ['SEQ Section \\n \\h', 'SEQ EqSec \\r 0 \\h']);
+  assert.equal(numberingControlCodes('chapter', true)[0], 'SEQ Chapter \\r 1 \\h');
+  assert.throws(() => numberingControlCodes('other'));
+});
+
+test('page width and display tabs follow the document margins instead of hard-coded paper sizes', () => {
+  assert.equal(wordTextWidth(pageXml), 9026);
+  assert.equal(wordTextWidth('<q:pgSz q:w="15840"/><q:pgMar q:left="1000" q:right="2000"/>'), 12840);
+  assert.throws(() => wordTextWidth('<w:pgSz w:w="100"/><w:pgMar w:left="200" w:right="200"/>'));
+  assert.throws(() => wordTextWidth('<w:pgSz w:w="100"/>'));
+  const markup = buildWordOoxml(message, 'cG5n', 'id', { display: true, widthTwips: 9026, style: 3 });
+  assert.ok(markup.includes('w:val="center" w:pos="4513"'));
+  assert.ok(markup.includes('w:val="right" w:pos="9026"'));
+  assert.equal([...markup.matchAll(/<w:fldSimple /g)].length, 3);
+  assert.ok(markup.includes('<w:t>(</w:t>'));
+  assert.ok(markup.includes('<w:t>)</w:t>'));
+});
+
+test('display insertion is centered even with numbering off; inline and table equations stay unnumbered', async () => {
+  for (const [atStart, inTable, style, expectedDisplay, expectedFields] of [
+    [true, false, 0, true, 0], [true, false, 2, true, 2], [false, false, 3, false, 0], [true, true, 1, false, 0],
+  ]) {
+    const operations = mockWord([], [], { atStart, inTable });
+    await createWordAdapter({ renderPng: async () => 'cG5n' }).insert({ ...message, numberingStyle: style });
+    const markup = operations.find((op) => op[0] === 'insert')[3];
+    assert.equal(markup.includes('<w:tabs>'), expectedDisplay);
+    assert.equal(operations.fields.length, expectedFields);
+    assert.equal(operations.filter((op) => op[0] === 'updateField').length, expectedFields);
+  }
+});
+
+test('empty-selection OOXML without page settings falls back to its containing section', async () => {
+  const operations = mockWord([], [], { atStart: true, selectionXml: '<w:document/>' });
+  await createWordAdapter({ renderPng: async () => 'cG5n' }).insert({ ...message, numberingStyle: 1 });
+  assert.ok(operations.find((op) => op[0] === 'insert')[3].includes('w:pos="9026"'));
+});
+
+test('updating an existing numbered image does not add or replace its adjacent number fields', async () => {
+  const old = picture();
+  const operations = mockWord([old], [old], { atStart: true, initialFields: ['SEQ EqGlobal \\* ARABIC'] });
+  await createWordAdapter({ renderPng: async () => 'cG5n' }).insert({ ...message, targetKey: 'word:id:old', numberingStyle: 3 });
+  assert.equal(operations.fields.length, 1);
+  const markup = operations.find((op) => op[0] === 'insert')[3];
+  assert.ok(!markup.includes('<w:fldSimple'));
+  assert.ok(!operations.some((op) => op[0] === 'deleteField'));
+});
+
+test('reset removes only hidden TeXture control fields and leaves visible or unrelated fields intact', async () => {
+  const initialFields = ['SEQ Chapter \\n \\h', 'SEQ EqGlobal \\* ARABIC', 'SEQ EqGlobalExtra \\h', 'PAGE', 'SEQ Figure \\h'];
+  const operations = mockWord([], [], { initialFields });
+  const adapter = createWordAdapter();
+  await adapter.numbering('reset');
+  assert.deepEqual(operations.filter((op) => op[0] === 'deleteField').map((op) => op[1]), ['SEQ Chapter \\n \\h']);
+  assert.deepEqual(operations.fields.slice(0, 5).map((field) => field.code),
+    ['Chapter', 'Section', 'EqGlobal', 'EqCh', 'EqSec'].map((name) => `SEQ ${name} \\r 0 \\h`));
+  assert.deepEqual(operations.fields.slice(5).map((field) => field.code), initialFields.slice(1));
+  await adapter.numbering('chapter');
+  assert.equal(operations.fields.at(-4).code, 'SEQ Chapter \\r 1 \\h');
+  await adapter.numbering('chapter');
+  assert.equal(operations.fields.at(-4).code, 'SEQ Chapter \\n \\h');
+  assert.equal(isNumberingControl('SEQ EqGlobalExtra \\h'), false);
+  assert.equal(isNumberingControl('SEQ EqGlobal \\* ARABIC'), false);
+});
+
+test('new section resets only its equation counter; update skips locked fields', async () => {
+  const operations = mockWord([], [], { initialFields: [{ code: 'SEQ EqGlobal \\* ARABIC', locked: true }] });
+  const adapter = createWordAdapter();
+  await adapter.numbering('section');
+  assert.deepEqual(operations.fields.slice(1).map((field) => field.code), ['SEQ Section \\n \\h', 'SEQ EqSec \\r 0 \\h']);
+  operations.length = 0;
+  await adapter.numbering('update');
+  assert.equal(operations.filter((op) => op[0] === 'updateField').length, 2);
+  await assert.rejects(adapter.numbering('unknown'), /Unknown/);
+});
+
+test('committed equation is reported once even if field refresh fails', async () => {
+  const operations = mockWord([], [], { atStart: true, failUpdate: true });
+  const result = await createWordAdapter({ renderPng: async () => 'cG5n' }).insert({ ...message, numberingStyle: 1 });
+  assert.equal(operations.filter((op) => op[0] === 'insert').length, 1);
+  assert.equal(result.noticeKey, 'numbering.updateFailed');
+  assert.ok(result.equation.key);
+});
+
+test('Enter regression: keep SVG bytes and dimensions; isolate picture baseline from following text', async () => {
+  const styled = { ...message, svg: svg.replace('<svg ', '<svg style="vertical-align:-0.5ex" ') };
+  const inline = buildWordOoxml(styled, 'cG5n', 'id');
+  assert.ok(inline.includes(Buffer.from(styled.svg).toString('base64')));
+  assert.ok(inline.includes('<w:position w:val="-4"/>'));
+  const display = buildWordOoxml(styled, 'cG5n', 'id', { display: true, widthTwips: 9026 });
+  assert.ok(!display.includes('<w:position w:val="-4"/>'));
+  const tail = display.slice(display.lastIndexOf('<w:p>'));
+  assert.ok(tail.includes('<w:textAlignment w:val="baseline"/>'));
+  assert.ok(tail.includes('<w:position w:val="0"/>'));
+  assert.ok(!tail.includes('w:drawing'));
+  officeEnvironment('Word', 'word');
+  const operations = mockWord([], []);
+  const result = await createWordAdapter({ renderPng: async () => 'cG5n' }).insert(message);
+  assert.equal(result.noticeKey, null);
+  assert.ok(operations.some((op) => op[0] === 'font' && op[1] === 'inserted:End' && op[2] === 'position' && op[3] === 0));
+  assert.ok(!operations.some((op) => op[0] === 'font' && op[1].includes('Whole')));
+});
+
+test('numbering capability is limited to desktop Word with WordApi 1.5', async () => {
+  for (const [host, hostId, platform, expected] of [
+    ['Word', 'word', 'Mac', true], ['Word', 'word', 'OfficeOnline', false], ['PowerPoint', 'ppt', 'Mac', false],
+  ]) {
+    officeEnvironment(host, hostId);
+    Office.onReady = async () => ({ host, platform });
+    const messages = [];
+    const backend = await createOfficeHost((message) => messages.push(message));
+    backend.receive({ type: 'ready' });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    assert.equal(messages.find((message) => message.type === 'init').capabilities.numbering, expected);
+  }
+});
+
+test('inherited custom tab stops are cleared before installing the center/right stops', () => {
+  const clearTabs = tabStopsToClear('<w:tabs><w:tab w:val="left" w:pos="720"/><w:tab w:val="right" w:pos="1440"/><w:tab w:val="left" w:pos="720"/></w:tabs>');
+  assert.deepEqual(clearTabs, [720, 1440]);
+  const markup = buildWordOoxml(message, 'cG5n', 'id', { display: true, widthTwips: 9026, clearTabs });
+  assert.ok(markup.includes('<w:tab w:val="clear" w:pos="720"/>'));
+  assert.ok(markup.indexOf('w:val="clear"') < markup.indexOf('w:val="center"'));
 });

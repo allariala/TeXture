@@ -39,6 +39,7 @@ const ui = {
   btnInsert: $('btnInsert'), insertLabel: $('insertLabel'), btnNew: $('btnNew'), btnRevert: $('btnRevert'), btnClear: $('btnClear'),
   statusNote: $('statusNote'), server: $('serverStatus'), serverLabel: $('serverLabel'),
   toast: $('toast'),
+  wordNumbering: $('wordNumbering'), numberingStyle: $('numberingStyle'), numberingConfirm: $('numberingConfirm'),
 };
 
 const editor = new TexEditor(ui.editor);
@@ -64,7 +65,7 @@ const state = {
   note: '',
   lastRenderError: null,
   // What the host can do (the Mac web add-in has no capture, Office hotkeys or focus control).
-  capabilities: { capture: true, hotkeys: true, focusDocument: true },
+  capabilities: { capture: true, hotkeys: true, focusDocument: true, numbering: false },
 };
 
 // ================================================================== public API used by other modules
@@ -156,6 +157,7 @@ function applyTheme() {
 function applySettings() {
   setLanguage(setting('language', defaultLanguage()));
   applyDom();
+  ui.numberingStyle.value = String([0, 1, 2, 3].includes(hostPrefs().numberingStyle) ? hostPrefs().numberingStyle : 0);
   applyTheme();
   if (palette) palette.setState({ open: setting('paletteOpen', false), tab: setting('paletteTab', 'structures') });
   ui.btnPalette.classList.toggle('active', setting('paletteOpen', false));
@@ -327,7 +329,8 @@ async function insert({ asNew = false } = {}) {
   const targetKey = editing && !asNew ? state.current.key : null;
   const nearKey = editing && asNew ? state.current.key : null;
   state.inFlight = { requestId, latex, wasInsert: state.mode === 'insert', asNewFrom: nearKey };
-  send({ type: 'insert', requestId, latex, svg, fontSize: state.fontSize, color: state.color, targetKey, nearKey });
+  send({ type: 'insert', requestId, latex, svg, fontSize: state.fontSize, color: state.color, targetKey, nearKey,
+    ...(state.capabilities.numbering ? { numberingStyle: Number(ui.numberingStyle.value) } : {}) });
   setTimeout(() => { if (state.busy && state.requestId === requestId) setBusy(false); }, 20000);
 }
 
@@ -344,6 +347,7 @@ function onInserted(msg) {
   }
   addHistory(flight?.latex ?? msg.equation?.latex);
   if (msg.notice) toast(msg.notice);
+  if (msg.noticeKey) toast(t(msg.noticeKey), true);
 
   if (HOST === 'ppt' && msg.equation) {
     // PowerPoint selects the new equation; mirror that immediately (the selection event confirms it).
@@ -360,7 +364,36 @@ function onInserted(msg) {
 function setBusy(busy) {
   state.busy = busy;
   ui.btnInsert.classList.toggle('busy', busy);
+  ui.wordNumbering.querySelectorAll('button, select').forEach((el) => { el.disabled = busy; });
 }
+
+let numberingRequest = null;
+function runNumbering(action) {
+  if (state.busy || !state.capabilities.numbering) return;
+  ui.numberingConfirm.hidden = true;
+  const requestId = ++state.requestId;
+  setBusy(true);
+  const timer = setTimeout(() => {
+    if (numberingRequest?.requestId !== requestId) return;
+    // Leave editing controls locked until the host replies: never overlap a timed-out mutation.
+    toast(t('numbering.timeout'), true);
+  }, 20000);
+  numberingRequest = { requestId, timer };
+  send({ type: 'numbering', requestId, action });
+}
+ui.numberingStyle.addEventListener('change', () => patchSettings({ hosts: { word: { numberingStyle: Number(ui.numberingStyle.value) } } }));
+$('numberingChapter').addEventListener('click', () => runNumbering('chapter'));
+$('numberingSection').addEventListener('click', () => runNumbering('section'));
+$('numberingUpdate').addEventListener('click', () => runNumbering('update'));
+$('numberingReset').addEventListener('click', () => {
+  ui.numberingConfirm.hidden = false;
+  $('numberingCancelReset').focus();
+});
+$('numberingConfirmReset').addEventListener('click', () => runNumbering('reset'));
+$('numberingCancelReset').addEventListener('click', () => { ui.numberingConfirm.hidden = true; $('numberingReset').focus(); });
+ui.numberingConfirm.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { e.preventDefault(); ui.numberingConfirm.hidden = true; $('numberingReset').focus(); }
+});
 
 function addHistory(latex) {
   if (!latex) return;
@@ -725,6 +758,7 @@ onMessage((msg) => {
       state.capabilities = { ...state.capabilities, ...(msg.capabilities || {}) };
       ui.btnCapture.hidden = !state.capabilities.capture;
       ui.server.hidden = !state.capabilities.capture;
+      ui.wordNumbering.hidden = HOST !== 'word' || !state.capabilities.numbering;
       state.settings = msg.settings || {};
       state.officeDark = !!msg.dark;
       const st = msg.state || {};
@@ -743,6 +777,13 @@ onMessage((msg) => {
       break;
     case 'inserted':
       onInserted(msg);
+      break;
+    case 'numbering.result':
+      if (numberingRequest?.requestId !== msg.requestId) break;
+      clearTimeout(numberingRequest.timer);
+      numberingRequest = null;
+      setBusy(false);
+      toast(msg.success ? t('numbering.done') : (msg.message || t('toast.error')), !msg.success);
       break;
     case 'error':
       if (msg.requestId && state.busy) setBusy(false);

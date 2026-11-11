@@ -10,7 +10,7 @@ Hancom equation script for Hangul 2024.
 | | Windows (2.2.0) | Mac |
 |---|---|---|
 | PowerPoint | ✅ | ✅ |
-| Word | ✅ (incl. equation numbering) | Web add-in added; Mac verification pending |
+| Word | ✅ (incl. equation numbering) | Web add-in + numbering; Mac verification pending |
 | Hangul 2024 equation script copy | ✅ | — (not verified) |
 | Offline screen capture → LaTeX | ✅ | — |
 | MathType-style shortcuts, palette, autocomplete, snippets | ✅ | ✅ (same editor) |
@@ -105,7 +105,8 @@ Settings are stored in `%APPDATA%\TeXture`, logs in `%LOCALAPPDATA%\TeXture\logs
 
 The Mac version uses the same editor as Windows, running as an Office web add-in for PowerPoint or Word (online;
 no screen capture or native Office hotkeys). The new Word adapter supports inline equation insertion and
-re-editing; actual Mac Word verification is pending. It does not include the Windows equation-numbering ribbon.
+re-editing and Windows-compatible equation-numbering fields; actual Mac Word verification is pending.
+Numbering controls appear in the web editor on desktop Word with WordApi 1.5+, instead of the Windows ribbon.
 PowerPoint still has no grouped-equation detection. The UI is served from
 `https://allariala.github.io/TeXture/ui/` (this repository on GitHub Pages).
 
@@ -144,7 +145,7 @@ See [Mac installation, limitations and manual checks](mac/README.md).
 
 **Mac Word 추가:** 변경된 웹 UI를 GitHub Pages에 배포한 뒤 `mac/manifest-word.xml`을
 `~/Library/Containers/com.microsoft.Word/Data/Documents/wef`에 복사하고 Word를 다시 시작합니다.
-인라인 수식 삽입·재편집을 구현했으며 실제 Mac Word 검증은 아직 하지 않았습니다.
+인라인 수식 삽입·재편집과 Windows 호환 식 번호를 구현했으며 실제 Mac Word 검증은 아직 하지 않았습니다.
 자세한 적용 방법과 지원 범위는 [Mac 안내](mac/README.md)를 참고하세요.
 
 ---

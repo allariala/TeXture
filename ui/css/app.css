@@ -358,6 +358,15 @@ kbd {
 }
 .pill.error { background: var(--danger-weak); color: var(--danger); }
 
+.word-numbering { flex: 0 0 auto; padding: 8px 12px 0; border-top: 1px solid var(--border); }
+.numbering-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.numbering-controls label { color: var(--text-2); font-size: 12px; }
+.numbering-controls select { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px; }
+.numbering-controls button.ghost, .numbering-confirm button.ghost { padding: 5px 7px; font-size: 11px; }
+.numbering-controls :disabled { opacity: .5; cursor: wait; }
+.numbering-confirm { padding: 8px; margin-top: 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.numbering-confirm p { margin: 0 0 6px; font-size: 12px; }
+
 /* ---------------------------------------------------------------- actions */
 .actions {
   display: flex;

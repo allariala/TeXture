@@ -2,6 +2,19 @@
 // data-i18n-aria; code calls t('key', {vars}). The language is a user setting (settings.json).
 
 const D = {
+  'word.caretFailed': ['수식은 삽입했습니다. Enter를 누르기 전에 그림 선택을 해제하고 뒤쪽 본문을 클릭해 주세요.', 'The equation was inserted. Deselect the picture and click the text after it before pressing Enter.'],
+  'numbering.label': ['식 번호', 'Numbering'],
+  'numbering.none': ['없음', 'None'],
+  'numbering.hint': ['문단 시작에서 삽입하는 수식에 적용합니다. 본문 중간과 표 안에는 번호를 넣지 않습니다.', 'Applies at the start of a paragraph, outside tables. Inline equations are not numbered.'],
+  'numbering.chapter': ['새 장', 'New Chapter'],
+  'numbering.section': ['새 절', 'New Section'],
+  'numbering.update': ['번호 갱신', 'Update'],
+  'numbering.reset': ['전체 초기화', 'Reset'],
+  'numbering.cancel': ['취소', 'Cancel'],
+  'numbering.resetPrompt': ['문서 전체의 수식 번호 카운터를 초기화할까요? 기존 번호는 유지하고 새 장·절 제어 필드만 제거합니다.', 'Reset all equation counters? Existing numbered equations remain; chapter/section control fields are removed.'],
+  'numbering.done': ['수식 번호 처리를 완료했습니다.', 'Equation numbering updated.'],
+  'numbering.timeout': ['번호 처리가 아직 완료되지 않았습니다. 문서를 확인한 뒤 다시 시도하세요.', 'Numbering has not finished. Check the document before trying again.'],
+  'numbering.updateFailed': ['수식은 삽입했지만 번호 갱신에 실패했습니다. 번호 갱신 버튼을 눌러 주세요.', 'The equation was inserted, but fields could not be refreshed. Click Update.'],
   // toolbar / editor
   'size.title': ['글꼴 크기 (pt) — Ctrl+Shift+, / Ctrl+Shift+.', 'Font size (pt) — Ctrl+Shift+, / Ctrl+Shift+.'],
   'size.down': ['작게', 'Smaller'],

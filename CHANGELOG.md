@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.3 (Mac Word web add-in; pending Mac verification)
+
+- Add the Windows numbering formats `(1)`, `(1.1)` and `(1.1.1)`, New Chapter, New Section, Update and confirmed Reset in the web editor.
+- Preserve Windows-compatible SEQ field names and existing visible numbers when editing equations or resetting counters.
+- Center new paragraph-start equations using page-width-aware tab stops, even without numbering; keep text/table insertions inline.
+- Clear inherited custom tab stops and isolate SVG character baseline formatting from the next paragraph.
+- Place the insertion caret outside the image and clear supported insertion-point baseline formatting; the web add-in does not intercept native Word Enter keys.
+- Keep Windows VSTO code and existing PowerPoint insertion unchanged. Mac rendering, field calculation and Enter behavior require manual verification.
+
 ## 2.2.0 (Windows)
 
 - Add a lowercase `hwp` button immediately left of the four-square palette icon.

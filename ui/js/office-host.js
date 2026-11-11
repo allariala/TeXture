@@ -60,6 +60,8 @@ export async function createOfficeHost(dispatch) {
   if (hostId === 'word' && !Office.context.requirements.isSetSupported('WordApi', '1.3'))
     throw new Error('TeXture requires WordApi 1.3 or later. Please update Word.');
   const word = hostId === 'word' ? (await import('./office-word.js')).createWordAdapter() : null;
+  const canNumber = !!word && info.platform !== (Office.PlatformType?.OfficeOnline || 'OfficeOnline') &&
+    Office.context.requirements.isSetSupported('WordApi', '1.5');
 
   const send = (msg) => setTimeout(() => dispatch(msg), 0);
   let inserting = false;
@@ -134,10 +136,15 @@ export async function createOfficeHost(dispatch) {
   }
 
   async function insert(msg) {
+    if (inserting) {
+      send({ type: 'error', requestId: msg.requestId, message: 'Another document operation is still running.' });
+      return;
+    }
     inserting = true;
     try {
       if (word) {
-        const result = await word.insert(msg);
+        if (msg.numberingStyle && !canNumber) throw new Error('Equation numbering requires desktop Word with WordApi 1.5.');
+        const result = await word.insert({ ...msg, numberingStyle: canNumber && [0, 1, 2, 3].includes(msg.numberingStyle) ? msg.numberingStyle : 0 });
         send({ type: 'inserted', requestId: msg.requestId, ...result, notice: null });
         return;
       }
@@ -197,6 +204,21 @@ export async function createOfficeHost(dispatch) {
     }
   }
 
+  async function numbering(msg) {
+    if (!canNumber || inserting) {
+      send({ type: 'numbering.result', requestId: msg.requestId, success: false,
+        message: canNumber ? 'Another document operation is still running.' : 'Equation numbering requires desktop Word with WordApi 1.5.' });
+      return;
+    }
+    inserting = true;
+    try {
+      await word.numbering(msg.action);
+      send({ type: 'numbering.result', requestId: msg.requestId, success: true, action: msg.action });
+    } catch (err) {
+      send({ type: 'numbering.result', requestId: msg.requestId, success: false, message: String(err.message || err) });
+    } finally { inserting = false; }
+  }
+
   // ------------------------------------------------------------------ snippets import / export
   function exportSnippets(list) {
     const json = JSON.stringify({ format: 'texture-snippets', version: 1, exported: new Date().toISOString(), snippets: list }, null, 2);
@@ -235,17 +257,18 @@ export async function createOfficeHost(dispatch) {
       switch (msg.type) {
         case 'ready':
           send({
-            type: 'init', host: hostId, surface: 'pane', version: '2.0.2',
+            type: 'init', host: hostId, surface: 'pane', version: '2.0.3',
             settings: deepMerge(defaults(), store.get('settings', {})),
             state: store.get('state.' + hostId, {}),
             snippets: store.get('snippets', null),
             dark: isDark(),
             server: 'Offline',
-            capabilities: { capture: false, hotkeys: false, focusDocument: false },
+            capabilities: { capture: false, hotkeys: false, focusDocument: false, numbering: canNumber },
           });
           pushSelection();
           break;
         case 'insert': insert(msg); break;
+        case 'numbering': numbering(msg); break;
         case 'settings': store.set('settings', deepMerge(store.get('settings', {}), msg.patch)); break;
         case 'state': store.set('state.' + hostId, deepMerge(store.get('state.' + hostId, {}), msg.patch)); break;
         case 'snippets.save': store.set('snippets', msg.snippets); break;

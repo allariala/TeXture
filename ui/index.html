@@ -75,6 +75,25 @@
     <div class="pill error" id="errorPill" hidden></div>
   </section>
 
+  <section class="word-numbering" id="wordNumbering" hidden aria-label="Equation numbering">
+    <div class="numbering-controls">
+      <label for="numberingStyle" data-i18n="numbering.label"></label>
+      <select id="numberingStyle" data-i18n-title="numbering.hint">
+        <option value="0" data-i18n="numbering.none"></option>
+        <option value="1">(1)</option><option value="2">(1.1)</option><option value="3">(1.1.1)</option>
+      </select>
+      <button class="ghost" id="numberingChapter" data-i18n="numbering.chapter"></button>
+      <button class="ghost" id="numberingSection" data-i18n="numbering.section"></button>
+      <button class="ghost" id="numberingUpdate" data-i18n="numbering.update"></button>
+      <button class="ghost" id="numberingReset" data-i18n="numbering.reset"></button>
+    </div>
+    <div id="numberingConfirm" class="numbering-confirm" role="alertdialog" aria-labelledby="numberingResetPrompt" tabindex="-1" hidden>
+      <p id="numberingResetPrompt" data-i18n="numbering.resetPrompt"></p>
+      <button class="ghost" id="numberingConfirmReset" data-i18n="numbering.reset"></button>
+      <button class="ghost" id="numberingCancelReset" data-i18n="numbering.cancel"></button>
+    </div>
+  </section>
+
   <footer class="actions">
     <button class="primary" id="btnInsert">
       <span id="insertLabel" data-i18n="btn.insert"></span><kbd>Ctrl+Enter</kbd>
