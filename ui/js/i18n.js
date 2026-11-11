@@ -5,7 +5,7 @@ const D = {
   'word.caretFailed': ['수식은 삽입했습니다. Enter를 누르기 전에 그림 선택을 해제하고 뒤쪽 본문을 클릭해 주세요.', 'The equation was inserted. Deselect the picture and click the text after it before pressing Enter.'],
   'numbering.label': ['식 번호', 'Numbering'],
   'numbering.none': ['없음', 'None'],
-  'numbering.hint': ['문단 시작에서 삽입하는 수식에 적용합니다. 본문 중간과 표 안에는 번호를 넣지 않습니다.', 'Applies at the start of a paragraph, outside tables. Inline equations are not numbered.'],
+  'numbering.hint': ['빈 문단에 삽입하는 수식에 적용합니다. 기존 내용이 있는 문단과 표 안에는 번호를 넣지 않습니다.', 'Applies in an empty paragraph outside tables. Equations in existing text are inline and not numbered.'],
   'numbering.chapter': ['새 장', 'New Chapter'],
   'numbering.section': ['새 절', 'New Section'],
   'numbering.update': ['번호 갱신', 'Update'],

@@ -165,15 +165,15 @@ export function createWordAdapter({ renderPng = pngFallback } = {}) {
 
   async function displayLayout(ctx, range) {
     const paragraph = range.paragraphs.getFirst();
-    // Compare text before the insertion point instead of relying on how Word classifies
-    // two zero-length ranges (which differs at paragraph boundaries between hosts).
-    const before = paragraph.getRange('Start').expandTo(range);
-    before.load('text');
-    before.inlinePictures.load('items');
+    // Only an entirely empty paragraph is eligible for display layout. Inspect the
+    // paragraph directly instead of expanding a collapsed prefix range, and include
+    // suffix text when the caret is at the start of an existing sentence.
+    paragraph.load('text');
+    paragraph.inlinePictures.load('items');
     const cell = range.parentTableCellOrNullObject;
     cell.load('value');
     await ctx.sync();
-    if (!cell.isNullObject || before.text.trim().length > 0 || before.inlinePictures.items.length > 0) return null;
+    if (!cell.isNullObject || paragraph.text.replace(/\r/g, '').length > 0 || paragraph.inlinePictures.items.length > 0) return null;
     return { display: true };
   }
   async function selectedPictures(ctx) {

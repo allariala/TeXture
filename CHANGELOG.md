@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.7 (Mac Word web add-in; pending Mac verification)
+
+- Restrict automatic display layout to entirely empty paragraphs outside tables. Read the paragraph text/pictures directly instead of judging an expanded collapsed prefix range; existing text, whitespace or pictures keep insertion inline.
+- Preserve 2.0.6 image markup, numbering, centered empty-paragraph layout and PowerPoint behavior. Add regressions for nonempty paragraphs even when the prefix appears empty.
+- Leave native Enter and picture-only copy/paste behavior unchanged; no extra line-break button is added. Mac inline insertion requires verification.
+
 ## 2.0.6 (Mac Word web add-in; pending Mac verification)
 
 - Replace paragraph centering/zero-width text only for unnumbered display equations with the margin-relative center/trailing-right tabs used by the numbered layout. The 2.0.5 workaround did not resolve the reported Enter redraw/duplication issue.

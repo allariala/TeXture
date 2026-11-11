@@ -42,7 +42,7 @@ test('dimensions accept points and reject invalid sizes before insertion', () =>
 
 const pageXml = '<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:left="1440" w:right="1440"/></w:sectPr>';
 function mockWord(selected, all, { failCaret = false, atStart = false, inTable = false, initialFields = [], failUpdate = false,
-  selectionXml = pageXml } = {}) {
+  selectionXml = pageXml, paragraphText = atStart ? '' : 'text', paragraphPictures = [] } = {}) {
   const operations = [];
   const fields = initialFields.map((field) => makeField(field.code || field, !!field.locked));
   function makeField(code, locked = false) {
@@ -57,7 +57,9 @@ function mockWord(selected, all, { failCaret = false, atStart = false, inTable =
   const range = (name) => ({
     font: new Proxy({}, { set(target, key, value) { operations.push(['font', name, key, value]); target[key] = value; return true; } }),
     inlinePictures: { items: selected, load() {} },
-    paragraphs: { getFirst: () => ({ getRange: () => ({ expandTo: () => ({ text: atStart ? '' : 'text', load() {},
+    paragraphs: { getFirst: () => ({ text: paragraphText, load() {},
+      inlinePictures: { items: paragraphPictures, load() {} },
+      getRange: () => ({ expandTo: () => ({ text: atStart ? '' : 'text', load() {},
       inlinePictures: { items: [], load() {} } }) }) }) },
     compareLocationWith() { return { value: atStart ? 'Equal' : 'After' }; },
     parentTableCellOrNullObject: { isNullObject: !inTable, load() {} },
@@ -213,6 +215,22 @@ test('empty paragraphs insert without reading selection or section OOXML', async
   await createWordAdapter({ renderPng: async () => 'cG5n' }).insert({ ...message, numberingStyle: 1 });
   assert.ok(operations.find((op) => op[0] === 'insert')[3].includes('w:relativeTo="margin"'));
   assert.ok(!operations.some((op) => op[0] === 'readOoxml'));
+});
+
+test('existing paragraph content prevents display insertion even when the prefix range appears empty', async () => {
+  for (const [paragraphText, paragraphPictures] of [
+    ['문장 중간의 삽입 위치\r', []], ['커서 뒤에 남아 있는 문장\r', []],
+    [' \t\r', []], ['\r', [picture()]],
+  ]) {
+    const operations = mockWord([], [], { atStart: true, paragraphText, paragraphPictures });
+    await createWordAdapter({ renderPng: async () => 'cG5n' }).insert({ ...message, numberingStyle: 2 });
+    const markup = operations.find((op) => op[0] === 'insert')[3];
+    assert.ok(!markup.includes('<w:ptab'));
+    assert.ok(!markup.includes('<w:pPr>'));
+    assert.ok(!markup.includes('<w:fldSimple'));
+    assert.equal((markup.match(/<w:p>/g) || []).length, 1);
+    assert.equal(operations.filter((op) => op[0] === 'updateField').length, 0);
+  }
 });
 
 test('updating an existing numbered image does not add or replace its adjacent number fields', async () => {
