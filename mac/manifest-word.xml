@@ -8,13 +8,13 @@
 -->
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
   <Id>4b565578-bc78-4c8f-bf44-c1458600bce0</Id>
-  <Version>2.0.3.0</Version>
+  <Version>2.0.4.0</Version>
   <ProviderName>Allariala</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="TeXture"/>
   <Description DefaultValue="LaTeX equation editor for Word: live preview, MathType-style shortcuts, snippets, editable vector equations."/>
-  <IconUrl DefaultValue="https://allariala.github.io/TeXture/mac/assets/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://allariala.github.io/TeXture/mac/assets/icon-64.png"/>
+  <IconUrl DefaultValue="https://allariala.github.io/TeXture/mac/assets/word-icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://allariala.github.io/TeXture/mac/assets/word-icon-64.png"/>
   <SupportUrl DefaultValue="https://allariala.github.io/TeXture/"/>
   <AppDomains>
     <AppDomain>https://allariala.github.io</AppDomain>
@@ -28,7 +28,7 @@
     </Sets>
   </Requirements>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://allariala.github.io/TeXture/ui/index.html?host=word&amp;platform=office"/>
+    <SourceLocation DefaultValue="https://allariala.github.io/TeXture/ui/index.html?host=word&amp;platform=office&amp;v=2.0.4"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
@@ -68,12 +68,12 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://allariala.github.io/TeXture/mac/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://allariala.github.io/TeXture/mac/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://allariala.github.io/TeXture/mac/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://allariala.github.io/TeXture/mac/assets/word-icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://allariala.github.io/TeXture/mac/assets/word-icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://allariala.github.io/TeXture/mac/assets/word-icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://allariala.github.io/TeXture/ui/index.html?host=word&amp;platform=office"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://allariala.github.io/TeXture/ui/index.html?host=word&amp;platform=office&amp;v=2.0.4"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="Group.Label" DefaultValue="TeXture"/>

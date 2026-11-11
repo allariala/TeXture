@@ -7,7 +7,8 @@
 //                  (pending edits) and restored when that equation is selected again.
 // Selecting something else never throws text away; it only switches which text is shown.
 
-import { send, onMessage, isHosted } from './bridge.js';
+import { send, onMessage, isHosted } from './bridge.js?v=2.0.4';
+import { bindEditorFocus } from './focus-policy.js?v=2.0.4';
 import { renderPreview, exportSvg, toRenderable, SLOT } from './render.js';
 import { TexEditor } from './editor.js';
 import { cloneDefaults, findSnippet } from './snippets.js';
@@ -677,14 +678,8 @@ ui.fontSize.addEventListener('wheel', (e) => { e.preventDefault(); setFontSize(s
   });
 })();
 
-// Clicking empty space puts the caret back in the editor (as in v1.2).
-document.addEventListener('mousedown', (e) => {
-  if (e.target.closest('button, input, textarea, label, .popup, .sheet, .palette, .size, .colors')) return;
-  setTimeout(() => editor.focus(), 0);
-});
-window.addEventListener('focus', () => {
-  if (!settingsPanel.isOpen && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) editor.focus();
-});
+bindEditorFocus({ document, window, editor, isSettingsOpen: () => settingsPanel.isOpen,
+  officeMode: params.get('platform') === 'office' });
 window.addEventListener('resize', schedulePreview);
 
 // ================================================================== toast / helpers

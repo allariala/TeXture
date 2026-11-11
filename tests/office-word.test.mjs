@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const source = await readFile(new URL('../ui/js/office-word.js', import.meta.url), 'utf8');
 const { describeWordPicture, buildWordOoxml, svgDimensions, createWordAdapter, numberingRuns,
-  numberingControlCodes, buildNumberingControlOoxml, isNumberingControl, wordTextWidth, tabStopsToClear } =
+  numberingControlCodes, buildNumberingControlOoxml, isNumberingControl, wordOperationError } =
   await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="24px" height="16px"><text>α</text></svg>';
 const message = { svg, latex: 'α & "x" < y', fontSize: 11, color: '#123456' };
@@ -57,10 +57,11 @@ function mockWord(selected, all, { failCaret = false, atStart = false, inTable =
   const range = (name) => ({
     font: new Proxy({}, { set(target, key, value) { operations.push(['font', name, key, value]); target[key] = value; return true; } }),
     inlinePictures: { items: selected, load() {} },
-    paragraphs: { getFirst: () => ({ getRange: () => range('paragraphStart') }) },
+    paragraphs: { getFirst: () => ({ getRange: () => ({ expandTo: () => ({ text: atStart ? '' : 'text', load() {},
+      inlinePictures: { items: [], load() {} } }) }) }) },
     compareLocationWith() { return { value: atStart ? 'Equal' : 'After' }; },
     parentTableCellOrNullObject: { isNullObject: !inTable, load() {} },
-    getOoxml: () => ({ value: selectionXml }),
+    getOoxml: () => { operations.push(['readOoxml']); return { value: selectionXml }; },
     getRange(location) { operations.push(['range', name, location]); return range(name + ':' + location); },
     insertOoxml(xml, location) {
       operations.push(['insert', name, location, xml]);
@@ -130,7 +131,7 @@ test('rendering failure makes no Word call; caret failure does not misreport a c
 });
 
 const hostSource = (await readFile(new URL('../ui/js/office-host.js', import.meta.url), 'utf8'))
-  .replace("import('./office-word.js')", "import('data:text/javascript;base64," + Buffer.from(source).toString('base64') + "')");
+  .replace(/import\('\.\/office-word\.js(?:\?[^']*)?'\)/, "import('data:text/javascript;base64," + Buffer.from(source).toString('base64') + "')");
 const { createOfficeHost } = await import('data:text/javascript;base64,' + Buffer.from(hostSource).toString('base64'));
 
 function officeEnvironment(host, requestedHost, supportsWord = true) {
@@ -185,14 +186,10 @@ test('number formats use exactly the Windows counter names and switches', () => 
   assert.throws(() => numberingControlCodes('other'));
 });
 
-test('page width and display tabs follow the document margins instead of hard-coded paper sizes', () => {
-  assert.equal(wordTextWidth(pageXml), 9026);
-  assert.equal(wordTextWidth('<q:pgSz q:w="15840"/><q:pgMar q:left="1000" q:right="2000"/>'), 12840);
-  assert.throws(() => wordTextWidth('<w:pgSz w:w="100"/><w:pgMar w:left="200" w:right="200"/>'));
-  assert.throws(() => wordTextWidth('<w:pgSz w:w="100"/>'));
-  const markup = buildWordOoxml(message, 'cG5n', 'id', { display: true, widthTwips: 9026, style: 3 });
-  assert.ok(markup.includes('w:val="center" w:pos="4513"'));
-  assert.ok(markup.includes('w:val="right" w:pos="9026"'));
+test('numbered display tabs are margin-relative and require no page-size lookup', () => {
+  const markup = buildWordOoxml(message, 'cG5n', 'id', { display: true, style: 3 });
+  assert.ok(markup.includes('<w:ptab w:alignment="center" w:relativeTo="margin"'));
+  assert.ok(markup.includes('<w:ptab w:alignment="right" w:relativeTo="margin"'));
   assert.equal([...markup.matchAll(/<w:fldSimple /g)].length, 3);
   assert.ok(markup.includes('<w:t>(</w:t>'));
   assert.ok(markup.includes('<w:t>)</w:t>'));
@@ -205,16 +202,17 @@ test('display insertion is centered even with numbering off; inline and table eq
     const operations = mockWord([], [], { atStart, inTable });
     await createWordAdapter({ renderPng: async () => 'cG5n' }).insert({ ...message, numberingStyle: style });
     const markup = operations.find((op) => op[0] === 'insert')[3];
-    assert.equal(markup.includes('<w:tabs>'), expectedDisplay);
+    assert.equal(markup.includes('<w:jc w:val="center"/>') || markup.includes('<w:ptab'), expectedDisplay);
     assert.equal(operations.fields.length, expectedFields);
     assert.equal(operations.filter((op) => op[0] === 'updateField').length, expectedFields);
   }
 });
 
-test('empty-selection OOXML without page settings falls back to its containing section', async () => {
+test('empty paragraphs insert without reading selection or section OOXML', async () => {
   const operations = mockWord([], [], { atStart: true, selectionXml: '<w:document/>' });
   await createWordAdapter({ renderPng: async () => 'cG5n' }).insert({ ...message, numberingStyle: 1 });
-  assert.ok(operations.find((op) => op[0] === 'insert')[3].includes('w:pos="9026"'));
+  assert.ok(operations.find((op) => op[0] === 'insert')[3].includes('w:relativeTo="margin"'));
+  assert.ok(!operations.some((op) => op[0] === 'readOoxml'));
 });
 
 test('updating an existing numbered image does not add or replace its adjacent number fields', async () => {
@@ -296,10 +294,25 @@ test('numbering capability is limited to desktop Word with WordApi 1.5', async (
   }
 });
 
-test('inherited custom tab stops are cleared before installing the center/right stops', () => {
-  const clearTabs = tabStopsToClear('<w:tabs><w:tab w:val="left" w:pos="720"/><w:tab w:val="right" w:pos="1440"/><w:tab w:val="left" w:pos="720"/></w:tabs>');
-  assert.deepEqual(clearTabs, [720, 1440]);
-  const markup = buildWordOoxml(message, 'cG5n', 'id', { display: true, widthTwips: 9026, clearTabs });
-  assert.ok(markup.includes('<w:tab w:val="clear" w:pos="720"/>'));
-  assert.ok(markup.indexOf('w:val="clear"') < markup.indexOf('w:val="center"'));
+test('ordinary inherited tab stops cannot intercept positional equation tabs', () => {
+  const markup = buildWordOoxml(message, 'cG5n', 'id', { display: true, style: 1 });
+  assert.ok(!markup.includes('<w:tab '));
+  assert.ok(!markup.includes('<w:tab/>'));
+  const plain = buildWordOoxml(message, 'cG5n', 'id', { display: true, style: 0 });
+  assert.ok(plain.includes('<w:jc w:val="center"/>'));
+  assert.ok(!plain.includes('w:ptab'));
+});
+
+test('blank Word errors include the failing stage and native error code without dumping document data', () => {
+  assert.equal(wordOperationError('paragraph.layout', { message: '', code: 'GeneralException',
+    debugInfo: { errorLocation: 'Range.expandTo', fullStatements: 'PRIVATE DOCUMENT CONTENT' } }).message,
+  '[paragraph.layout] GeneralException / Range.expandTo');
+});
+
+test('a native layout failure reaches the user with its stage and code before any insertion', async () => {
+  globalThis.Word = { run: async (callback) => callback({ document: { getSelection: () => ({
+    getRange: () => ({ paragraphs: { getFirst() { throw { code: 'GeneralException', message: '' }; } } }),
+  }) } }) };
+  await assert.rejects(createWordAdapter({ renderPng: async () => 'cG5n' })
+    .insert({ ...message, numberingStyle: 0 }), /\[paragraph.layout\] GeneralException/);
 });

@@ -81,40 +81,25 @@ export function buildNumberingControlOoxml(action, resetRequested = false) {
   return `<pkg:package xmlns:pkg="http://schemas.microsoft.com/office/2006/xmlPackage"><pkg:part pkg:name="/_rels/.rels" pkg:contentType="application/vnd.openxmlformats-package.relationships+xml"><pkg:xmlData><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships></pkg:xmlData></pkg:part><pkg:part pkg:name="/word/document.xml" pkg:contentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"><pkg:xmlData><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p>${runs}</w:p></w:body></w:document></pkg:xmlData></pkg:part></pkg:package>`;
 }
 
-// Selection OOXML includes section properties; use twips, exactly as Word tab stops do.
-export function wordTextWidth(ooxml) {
-  const tag = (name) => String(ooxml).match(new RegExp('<(?:[\\w.-]+:)?' + name + '\\b[^>]*>', 'i'))?.[0] || '';
-  const value = (text, name) => Number(text.match(new RegExp('\\s(?:[\\w.-]+:)?' + name + '=["\'](\\d+)["\']', 'i'))?.[1]);
-  const width = value(tag('pgSz'), 'w');
-  const margins = tag('pgMar');
-  const left = value(margins, 'left'), right = value(margins, 'right');
-  const textWidth = width - left - right;
-  if (!(width > 0 && Number.isFinite(left) && Number.isFinite(right) && textWidth > 0))
-    throw new Error('Could not read the page width for equation numbering.');
-  return textWidth;
+export function wordOperationError(stage, error) {
+  const detail = [error?.message, error?.code, error?.debugInfo?.errorLocation]
+    .filter((value) => typeof value === 'string' && value.trim());
+  return new Error(`[${stage}] ${[...new Set(detail)].join(' / ') || String(error || 'Unknown Word error')}`);
 }
 
-export function tabStopsToClear(ooxml) {
-  const positions = new Set();
-  for (const tag of String(ooxml).match(/<(?:[\w.-]+:)?tab\b[^>]*>/gi) || []) {
-    const position = tag.match(/\s(?:[\w.-]+:)?pos=["'](\d+)["']/i)?.[1];
-    if (position) positions.add(Number(position));
-  }
-  return [...positions].sort((a, b) => a - b);
-}
-
-export function buildWordOoxml(msg, pngBase64, id, { display = false, widthTwips = 0, style = 0, clearTabs = [] } = {}) {
+export function buildWordOoxml(msg, pngBase64, id, { display = false, style = 0 } = {}) {
   const { width, height } = svgDimensions(msg.svg);
   const cx = Math.round(width * 9525), cy = Math.round(height * 9525);
   const title = TITLE_PREFIX + JSON.stringify({ v: 2, size: msg.fontSize, color: msg.color || '#000000',
     bw: width * 72 / 96, bh: height * 72 / 96, id });
   const props = `name="TeXture equation" descr="${xml(LEGACY_PREFIX + msg.latex)}" title="${xml(title)}"`;
-  if (display && !(widthTwips > 0)) throw new Error('Invalid equation tab-stop width.');
   const neutralRun = '<w:rPr><w:position w:val="0"/><w:vertAlign w:val="baseline"/></w:rPr>';
-  const clearedTabs = clearTabs.filter((pos) => Number.isFinite(pos) && pos >= 0)
-    .map((pos) => `<w:tab w:val="clear" w:pos="${Math.round(pos)}"/>`).join('');
-  const paragraphStart = display ? `<w:pPr><w:tabs>${clearedTabs}<w:tab w:val="center" w:pos="${Math.round(widthTwips / 2)}"/><w:tab w:val="right" w:pos="${Math.round(widthTwips)}"/></w:tabs><w:jc w:val="left"/><w:textAlignment w:val="center"/></w:pPr><w:r>${neutralRun}<w:tab/></w:r>` : '';
-  const number = display && style > 0 ? '<w:r><w:tab/><w:t>(</w:t></w:r>' + numberingRuns(style) + '<w:r><w:t>)</w:t></w:r>' : '';
+  // Positional tabs are resolved by Word against the actual margins. They do not depend on
+  // section OOXML being available and cannot be intercepted by inherited ordinary tab stops.
+  const numbered = display && style > 0;
+  const paragraphStart = display ? `<w:pPr><w:jc w:val="${numbered ? 'left' : 'center'}"/><w:textAlignment w:val="center"/></w:pPr>` +
+    (numbered ? `<w:r>${neutralRun}<w:ptab w:alignment="center" w:relativeTo="margin" w:leader="none"/></w:r>` : '') : '';
+  const number = numbered ? '<w:r><w:ptab w:alignment="right" w:relativeTo="margin" w:leader="none"/><w:t>(</w:t></w:r>' + numberingRuns(style) + '<w:r><w:t>)</w:t></w:r>' : '';
   // Match Windows FinishInline. Only the SVG character gets a baseline offset.
   const baseline = msg.svg.match(/vertical-align:\s*(-?[\d.]+)ex/i);
   const position = !display && baseline ? Math.round(Number(baseline[1]) * msg.fontSize * 0.430554) * 2 : 0;
@@ -176,29 +161,16 @@ export function createWordAdapter({ renderPng = pngFallback } = {}) {
 
   async function displayLayout(ctx, range) {
     const paragraph = range.paragraphs.getFirst();
-    const relation = range.compareLocationWith(paragraph.getRange('Start'));
+    // Compare text before the insertion point instead of relying on how Word classifies
+    // two zero-length ranges (which differs at paragraph boundaries between hosts).
+    const before = paragraph.getRange('Start').expandTo(range);
+    before.load('text');
+    before.inlinePictures.load('items');
     const cell = range.parentTableCellOrNullObject;
     cell.load('value');
     await ctx.sync();
-    if (!cell.isNullObject || relation.value !== 'Equal') return null;
-    const content = range.getOoxml();
-    await ctx.sync();
-    // Do not guess A4/Letter: incorrect tabs would silently misalign the number.
-    try { return { display: true, widthTwips: wordTextWidth(content.value), clearTabs: tabStopsToClear(content.value) }; }
-    catch {
-      // Some Word versions omit section metadata from an empty selection. Locate the owning section.
-      const sections = ctx.document.sections;
-      sections.load('items');
-      await ctx.sync();
-      const relations = sections.items.map((section) => section.body.getRange().compareLocationWith(range));
-      await ctx.sync();
-      const index = relations.findIndex((r) => ['Contains', 'Equal', 'ContainsStart', 'ContainsEnd'].includes(r.value));
-      if (index < 0) throw new Error('Could not locate the equation section.');
-      const sectionXml = sections.items[index].body.getOoxml();
-      await ctx.sync();
-      return { display: true, widthTwips: wordTextWidth(sectionXml.value),
-        clearTabs: tabStopsToClear(content.value + sectionXml.value) };
-    }
+    if (!cell.isNullObject || before.text.trim().length > 0 || before.inlinePictures.items.length > 0) return null;
+    return { display: true };
   }
   async function selectedPictures(ctx) {
     const pictures = ctx.document.getSelection().inlinePictures;
@@ -251,9 +223,12 @@ export function createWordAdapter({ renderPng = pngFallback } = {}) {
       });
     },
     async insert(msg) {
+      let stage = 'image.render';
+      try {
       // Complete image rendering before changing the document; a rendering failure preserves it.
       const png = await renderPng(msg.svg);
-      return Word.run(async (ctx) => {
+      return await Word.run(async (ctx) => {
+        stage = 'selection';
         const target = msg.targetKey ? await findPicture(ctx, msg.targetKey) : null;
         const near = !target && msg.nearKey ? await findPicture(ctx, msg.nearKey) : null;
         const id = (target && describeWordPicture(target)?._id) || newId();
@@ -266,9 +241,11 @@ export function createWordAdapter({ renderPng = pngFallback } = {}) {
           range = range.getRange('End');
         }
         // Only new display equations get a number. Updating an image preserves adjacent fields.
+        stage = 'paragraph.layout';
         const layout = !target && Number.isInteger(msg.numberingStyle) ? await displayLayout(ctx, range) : null;
         const style = [0, 1, 2, 3].includes(msg.numberingStyle) ? msg.numberingStyle : 0;
         const ooxml = buildWordOoxml(msg, png, id, { ...layout, style });
+        stage = 'image.insertOoxml';
         const inserted = range.insertOoxml(ooxml, 'Replace');
         await ctx.sync();
         let noticeKey = null;
@@ -281,6 +258,7 @@ export function createWordAdapter({ renderPng = pngFallback } = {}) {
           key: 'word:id:' + id, latex: msg.latex, fontSize: msg.fontSize, color: msg.color, legacy: false,
         } };
       });
+      } catch (error) { throw wordOperationError(stage, error); }
     },
   };
 }

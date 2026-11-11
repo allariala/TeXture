@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.4 (Mac Word web add-in; pending Mac verification)
+
+- Fix editor focus recovery stealing focus from native numbering dropdowns and from the Word document.
+- Remove empty-range OOXML/page-width queries from equation insertion. Use paragraph centering without numbers and margin-relative positional tabs with numbers.
+- Detect paragraph-start insertion from its text/pictures rather than comparing zero-length range locations.
+- Include the failed insertion stage and native Word error code in error messages; preserve the Enter-related caret/baseline safeguards.
+- Use blue Word icons from the existing Windows icon and version the web entry point/changed module chain to avoid mixed cached releases.
+
 ## 2.0.3 (Mac Word web add-in; pending Mac verification)
 
 - Add the Windows numbering formats `(1)`, `(1.1)` and `(1.1.1)`, New Chapter, New Section, Update and confirmed Reset in the web editor.

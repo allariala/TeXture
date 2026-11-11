@@ -151,7 +151,7 @@ function useBackend(b) {
 }
 
 if (officeMode) {
-  import('./office-host.js')
+  import('./office-host.js?v=2.0.4')
     .then((m) => m.createOfficeHost(dispatch))
     .then(useBackend)
     .catch((err) => {
