@@ -10,11 +10,11 @@ Hancom equation script for Hangul 2024.
 | | Windows (2.2.0) | Mac |
 |---|---|---|
 | PowerPoint | ✅ | ✅ |
-| Word | ✅ (incl. equation numbering) | — |
+| Word | ✅ (incl. equation numbering) | Web add-in added; Mac verification pending |
 | Hangul 2024 equation script copy | ✅ | — (not verified) |
 | Offline screen capture → LaTeX | ✅ | — |
 | MathType-style shortcuts, palette, autocomplete, snippets | ✅ | ✅ (same editor) |
-| Install | `.exe` installer | sideload `manifest.xml` |
+| Install | `.exe` installer | sideload the PowerPoint / Word manifest |
 
 ---
 
@@ -103,8 +103,10 @@ Settings are stored in `%APPDATA%\TeXture`, logs in `%LOCALAPPDATA%\TeXture\logs
 
 ## Install on Mac
 
-The Mac version is the same editor as on Windows, running as an Office web add-in for PowerPoint (online;
-no screen capture, no Office hotkeys, no grouped-equation detection). It is served from
+The Mac version uses the same editor as Windows, running as an Office web add-in for PowerPoint or Word (online;
+no screen capture or native Office hotkeys). The new Word adapter supports inline equation insertion and
+re-editing; actual Mac Word verification is pending. It does not include the Windows equation-numbering ribbon.
+PowerPoint still has no grouped-equation detection. The UI is served from
 `https://allariala.github.io/TeXture/ui/` (this repository on GitHub Pages).
 
 1. Download [`mac/manifest.xml`](mac/manifest.xml) (2.0 — **users of 1.x must replace their old manifest with this one**).
@@ -115,6 +117,13 @@ no screen capture, no Office hotkeys, no grouped-equation detection). It is serv
 
 Publishing (maintainer): push this repository to `allariala/TeXture` and enable GitHub Pages for branch `main`,
 folder `/ (root)`. Equations made on Mac and Windows are interchangeable (same `TEXTURE_*` tags and alt text).
+
+**Word for Mac:** first publish the updated web UI including `ui/js/office-word.js`, then download
+[`mac/manifest-word.xml`](mac/manifest-word.xml) and copy it to
+`~/Library/Containers/com.microsoft.Word/Data/Documents/wef` (create the folder if needed).
+Restart Word and open **Home → TeXture** or **Insert → Add-ins → My Add-ins**.
+The manifest alone does not add Word support to an older hosted UI.
+See [Mac installation, limitations and manual checks](mac/README.md).
 
 ---
 
@@ -133,6 +142,11 @@ folder `/ (root)`. Equations made on Mac and Windows are interchangeable (same `
 `~/Library/Containers/com.microsoft.Powerpoint/Data/Documents/wef` 폴더에 복사(기존 파일 교체)하고 PowerPoint를
 다시 시작한 뒤 *홈 → TeXture* 또는 *삽입 → 추가 기능 → 내 추가 기능*에서 TeXture를 선택합니다.
 
+**Mac Word 추가:** 변경된 웹 UI를 GitHub Pages에 배포한 뒤 `mac/manifest-word.xml`을
+`~/Library/Containers/com.microsoft.Word/Data/Documents/wef`에 복사하고 Word를 다시 시작합니다.
+인라인 수식 삽입·재편집을 구현했으며 실제 Mac Word 검증은 아직 하지 않았습니다.
+자세한 적용 방법과 지원 범위는 [Mac 안내](mac/README.md)를 참고하세요.
+
 ---
 
 ## Repository layout
@@ -145,7 +159,7 @@ windows/
   Word/             VSTO add-in (Word adapter + ribbon, equation numbering)
   capture/          offline OCR engine (Python, texify) — GPL-3.0, see THIRD_PARTY_NOTICES.md
   installer/        Inno Setup script, build.ps1, new-signing-cert.ps1
-mac/                Mac web add-in manifest + icons
+mac/                PowerPoint / Word web add-in manifests, setup guide and icons
 tests/              HWP converter regression tests and equation fixtures
 TeXture.sln
 ```

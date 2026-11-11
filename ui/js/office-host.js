@@ -1,4 +1,4 @@
-// Host implementation for the Office web add-in (PowerPoint for Mac / web). It speaks the same message
+// Host implementation for the Office web add-in (PowerPoint and Word for Mac / web). It speaks the same message
 // protocol as the Windows add-in (see TeXtureRuntime.cs), so the editor UI is identical; features that a
 // web add-in cannot provide (screen capture, Office hotkeys, moving focus back to the slide) are reported
 // through init.capabilities and hidden by the UI.
@@ -45,14 +45,21 @@ function deepMerge(target, patch) {
 const defaults = () => ({
   theme: 'auto',
   afterInsert: 'editor',
-  hosts: { ppt: { fontSize: 18, color: '#000000' } },
+  hosts: { ppt: { fontSize: 18, color: '#000000' }, word: { fontSize: 11, color: '#000000' } },
 });
 
 /** Resolves with a host object ({receive}) or rejects when not running inside Office. */
 export async function createOfficeHost(dispatch) {
   await loadScript(OFFICE_JS);
   const info = await Office.onReady();
-  if (!info || info.host !== Office.HostType.PowerPoint) throw new Error('not running in PowerPoint');
+  if (!info || ![Office.HostType.PowerPoint, Office.HostType.Word].includes(info.host))
+    throw new Error('TeXture requires PowerPoint or Word.');
+  const hostId = info.host === Office.HostType.Word ? 'word' : 'ppt';
+  const requestedHost = new URLSearchParams(location.search).get('host');
+  if (requestedHost && requestedHost !== hostId) throw new Error('Please install the manifest for this Office application.');
+  if (hostId === 'word' && !Office.context.requirements.isSetSupported('WordApi', '1.3'))
+    throw new Error('TeXture requires WordApi 1.3 or later. Please update Word.');
+  const word = hostId === 'word' ? (await import('./office-word.js')).createWordAdapter() : null;
 
   const send = (msg) => setTimeout(() => dispatch(msg), 0);
   let inserting = false;
@@ -88,6 +95,7 @@ export async function createOfficeHost(dispatch) {
   }
 
   async function readSelection() {
+    if (word) return word.readSelection();
     return PowerPoint.run(async (ctx) => {
       const shapes = ctx.presentation.getSelectedShapes();
       const slides = ctx.presentation.getSelectedSlides();
@@ -128,6 +136,11 @@ export async function createOfficeHost(dispatch) {
   async function insert(msg) {
     inserting = true;
     try {
+      if (word) {
+        const result = await word.insert(msg);
+        send({ type: 'inserted', requestId: msg.requestId, ...result, notice: null });
+        return;
+      }
       // 1. Remember where the equation to replace / to insert next to is, and the shapes already present.
       const before = await PowerPoint.run(async (ctx) => {
         const slide = ctx.presentation.getSelectedSlides().getItemAt(0);
@@ -222,9 +235,9 @@ export async function createOfficeHost(dispatch) {
       switch (msg.type) {
         case 'ready':
           send({
-            type: 'init', host: 'ppt', surface: 'pane', version: '2.0.1',
+            type: 'init', host: hostId, surface: 'pane', version: '2.0.2',
             settings: deepMerge(defaults(), store.get('settings', {})),
-            state: store.get('state.ppt', {}),
+            state: store.get('state.' + hostId, {}),
             snippets: store.get('snippets', null),
             dark: isDark(),
             server: 'Offline',
@@ -234,7 +247,7 @@ export async function createOfficeHost(dispatch) {
           break;
         case 'insert': insert(msg); break;
         case 'settings': store.set('settings', deepMerge(store.get('settings', {}), msg.patch)); break;
-        case 'state': store.set('state.ppt', deepMerge(store.get('state.ppt', {}), msg.patch)); break;
+        case 'state': store.set('state.' + hostId, deepMerge(store.get('state.' + hostId, {}), msg.patch)); break;
         case 'snippets.save': store.set('snippets', msg.snippets); break;
         case 'snippets.export': exportSnippets(msg.snippets); break;
         case 'snippets.import': importSnippets(); break;

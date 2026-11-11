@@ -154,7 +154,10 @@ if (officeMode) {
   import('./office-host.js')
     .then((m) => m.createOfficeHost(dispatch))
     .then(useBackend)
-    .catch((err) => { console.warn('[texture] Office host unavailable, using the mock host:', err.message); useBackend(mockHost); });
+    .catch((err) => {
+      console.error('[texture] Office host unavailable:', err.message);
+      dispatch({ type: 'error', message: 'Office connection failed: ' + err.message });
+    });
 } else if (!webview) {
   useBackend(mockHost);
 }
